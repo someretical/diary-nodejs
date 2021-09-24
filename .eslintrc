@@ -14,7 +14,6 @@
 	},
 	"ignorePatterns": ["*.js"],
 	"rules": {
-		"no-console": 1,
 		"prettier/prettier": 2,
 		"sort-imports": 1
 	}

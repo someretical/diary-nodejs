@@ -1,35 +1,48 @@
 /* eslint-disable no-console */
-import { decrypt, encrypt, hash_key } from './util/encryptor';
-import { gzip, unzip } from './util/zipper';
+import * as readline from 'readline';
+import { promisify } from 'util';
 
-const main = async (): Promise<void> => {
-	// const string = 'this is a test string';
-	const key = 'super duper secret key';
+/**
+ * prompt a password from the user to decrypt the diary
+ *
+ * TODO replace with an actual function hopefully
+ */
+export const prompt_pwd = async (): Promise<string> => {
+	const rl = readline.createInterface({
+		input: process.stdin,
+		output: process.stdout,
+	});
 
-	const hashed_key = hash_key(key);
-	// const encrypted = encrypt(Buffer.from(string), hashed_key);
+	/**
+	 * begin copy pasted code to promisify rl.question
+	 * I don't believe this implementation supports aborting
+	 * see https://nodejs.org/api/readline.html#readline_rl_question_query_options_callback
+	 * code taken from https://gist.github.com/januswel/c1634511a88ed2ce4c32d1763a8b0402
+	 */
+	const q = rl.question as unknown as {
+		[promisify.custom]: (question: string) => Promise<string>;
+	};
 
-	// console.log('encrypted');
+	q[promisify.custom] = (question: string) =>
+		new Promise<string>(resolve => {
+			rl.question(question, input => {
+				resolve(input);
+			});
+		}).finally(() => {
+			rl.close();
+		});
 
-	// await gzip('data/diary.dat', encrypted);
+	const question = promisify(rl.question) as unknown as (
+		q: string
+	) => Promise<string>;
+	// end copy pasted code to promisify rl.question
 
-	// console.log('gzipped');
+	const pwd = (await question('password: ')) || 'a very secret key';
 
-	const unzipped = await unzip('data/diary.dat');
-
-	console.log('unzipped');
-
-	// let decrypted: Buffer;
-	//
-	// try {
-	// 	decrypted = decrypt(unzipped, hash_key('not the right secret key'));
-	// } catch (err) {
-	// 	return console.log('failed to decrypt');
-	// }
-
-	const decrypted = decrypt(unzipped, hashed_key).toString('utf8');
-
-	console.log(JSON.parse(decrypted));
+	return pwd;
 };
+
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+const main = async (): Promise<void> => {};
 
 main();

@@ -1,12 +1,16 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import * as fs from 'fs';
-import * as interfaces from './interfaces';
+import { DailyEntry, JSONDiary, MonthHolder, YearHolder } from './types';
+import { promises as fsp } from 'fs';
 
-export const migratev1 = (
-	location = 'data/moodflow_backup.json'
-): interfaces.JSONFormat => {
-	const input_data = JSON.parse(fs.readFileSync(location).toString('utf8'));
-	const output_data: interfaces.JSONFormat = {
+/**
+ * migrates moodflow json to file version 1
+ */
+export const migratev1 = async (
+	location = './data/moodflow_backup.json'
+): Promise<JSONDiary> => {
+	const json = await fsp.readFile(location);
+	const input_data = JSON.parse(json.toString('utf8'));
+	const output_data: JSONDiary = {
 		settings: {
 			sync: false,
 		},
@@ -18,21 +22,21 @@ export const migratev1 = (
 	};
 
 	for (const [y, year_obj] of Object.entries(input_data.data.moods)) {
-		const year: interfaces.YearHolder = {
+		const year: YearHolder = {
 			year: parseInt(y),
 			months: [],
 		};
 
 		// @ts-ignore
 		for (const [m, month_obj] of Object.entries(year_obj)) {
-			const month: interfaces.MonthHolder = {
+			const month: MonthHolder = {
 				month: parseInt(m),
 				days: [],
 			};
 
 			// @ts-ignore
 			for (const [d, day_obj] of Object.entries(month_obj)) {
-				const day: interfaces.DailyEntry = {
+				const day: DailyEntry = {
 					day: parseInt(d),
 					// @ts-ignore
 					last_updated: day_obj.entries[0].timestamp,

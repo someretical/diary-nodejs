@@ -1,25 +1,21 @@
 import * as fs from 'fs';
 import * as stream from 'stream';
 import * as zlib from 'zlib';
+import { promises as fsp } from 'fs';
 import { promisify } from 'util';
 
 const _pipe = promisify(stream.pipeline);
 const _unzip = promisify(zlib.unzip);
 
-export const unzip = async (location: string): Promise<Buffer> => {
-	// read readablestream into a buffer
-	// https://github.com/nodejs/readable-stream/issues/403#issuecomment-479069043
+/**
+ * unzips a gzipped file
+ */
+export const unzip = async (location: string): Promise<Buffer> =>
+	_unzip(await fsp.readFile(location));
 
-	const chunks = [];
-	const data = fs.createReadStream(location);
-
-	for await (const chunk of data) {
-		chunks.push(chunk);
-	}
-
-	return _unzip(Buffer.concat(chunks));
-};
-
+/**
+ * saves a file with gzip compression
+ */
 export const gzip = async (
 	location: string,
 	source: Buffer,
@@ -30,5 +26,5 @@ export const gzip = async (
 
 	// buffer !== readable stream so Readable is needed to convert the provided buffer
 	// https://stackoverflow.com/q/13230487
-	await _pipe(stream.Readable.from(source), gzip, destination);
+	return _pipe(stream.Readable.from(source), gzip, destination);
 };

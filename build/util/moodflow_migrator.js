@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.migratev1 = void 0;
-const fs = require("fs");
-const migratev1 = (location = 'data/moodflow_backup.json') => {
-    const input_data = JSON.parse(fs.readFileSync(location).toString('utf8'));
+const fs_1 = require("fs");
+const migratev1 = async (location = './data/moodflow_backup.json') => {
+    const json = await fs_1.promises.readFile(location);
+    const input_data = JSON.parse(json.toString('utf8'));
     const output_data = {
         settings: {
             sync: false,
