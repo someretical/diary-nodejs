@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as inquirer from 'inquirer';
 import {
 	BACKUP_PATH,
 	DIARY_PATH,
@@ -10,12 +11,9 @@ import {
 } from './types';
 import { decrypt, encrypt, hash_key } from './encryptor';
 import { gzip, unzip } from './zipper';
-import { OAuth2Client } from 'google-auth-library';
 import { promises as fsp } from 'fs';
 import { pipeline } from 'stream';
 import { promisify } from 'util';
-import { prompt_pwd } from '..';
-import { upload_diary } from './google_driver';
 
 const _pipe = promisify(pipeline);
 
@@ -66,27 +64,48 @@ export const open_diary = async (): Promise<OpenDiary> => {
 
 	try {
 		unzipped = await unzip(DIARY_PATH);
+		console.log('[*] Local diary found. Opening...');
 	} catch (err) {
 		try {
 			unzipped = await unzip(BACKUP_PATH);
+			console.log('[*] Local diary found. Opening...');
 			// eslint-disable-next-line no-empty
-		} catch (err) {}
+		} catch (err) {
+			console.log(
+				'[*] No existing diary was found. A new one will be created.'
+			);
+		}
 	}
 
-	const prompt = async (): Promise<OpenDiary> => {
-		pwd = await prompt_pwd();
+	const prompt_pwd = async (): Promise<OpenDiary> => {
+		const answer = await inquirer.prompt([
+			{
+				type: 'password',
+				message: '[>]',
+				name: 'pwd',
+				mask: '*',
+				prefix: '',
+				suffix: '',
+			},
+		]);
+
+		if (!answer.pwd) throw new Error();
+
+		pwd = hash_key(answer.pwd);
 
 		try {
 			/**
 			 * unzipped will always be truthy
 			 * The || Buffer.from('') is just there to shut typescript up :^)
 			 */
-			const tmp = decrypt(unzipped || Buffer.from(''), hash_key(pwd));
+			const tmp = decrypt(unzipped || Buffer.from(''), pwd);
 
 			return { diary: JSON.parse(tmp.toString('utf8')), key: pwd };
 		} catch (err) {
-			console.log('Wrong password.');
-			return prompt();
+			console.log(
+				'[!] Wrong password. To overwrite the local diary, abort this command and type `new`'
+			);
+			return prompt_pwd();
 		}
 	};
 
@@ -95,7 +114,10 @@ export const open_diary = async (): Promise<OpenDiary> => {
 			const tmp = JSON.parse(unzipped.toString('utf8'));
 			return { diary: tmp, key: pwd };
 		} catch (err) {
-			return prompt();
+			console.log(
+				'[*] Please enter the password. To abort this command, simply type nothing and press enter.'
+			);
+			return prompt_pwd();
 		}
 	} else {
 		return { diary: parsed, key: pwd };
@@ -103,30 +125,23 @@ export const open_diary = async (): Promise<OpenDiary> => {
 };
 
 /**
- * Saves the currently open diary AND uploads to google drive if sync is enabled
+ * Saves the currently open diary
  *
  * copy diary.dat to diary.dat.bak
  * save current version as diary.dat
- *
- * if sync is enabled, upload it
  */
-export const save_diary = async (
-	open_diary: OpenDiary,
-	settings: Settings,
-	oauth2client: OAuth2Client
-): Promise<void> => {
-	const src = fs.createReadStream(DIARY_PATH);
-	const dest = fs.createWriteStream(BACKUP_PATH);
+export const save_diary = async (open_diary: OpenDiary): Promise<void> => {
+	// if there is no diary.dat the first time around, this will pass to the empty catch block
+	try {
+		const src = fs.createReadStream(DIARY_PATH);
+		const dest = fs.createWriteStream(BACKUP_PATH);
 
-	await _pipe(src, dest);
+		await _pipe(src, dest);
+		// eslint-disable-next-line no-empty
+	} catch (err) {}
 
 	let encrypted = Buffer.from(JSON.stringify(open_diary.diary));
-	if (open_diary.key !== null)
-		encrypted = encrypt(encrypted, hash_key(open_diary.key));
+	if (open_diary.key !== null) encrypted = encrypt(encrypted, open_diary.key);
 
 	await gzip(DIARY_PATH, encrypted);
-
-	if (settings.sync) {
-		await upload_diary(oauth2client, settings);
-	}
 };

@@ -9,7 +9,8 @@
 		"outDir": "./build",
 		"removeComments": true,
 		"lib": ["esnext", "DOM"],
-		"strict": true
+		"strict": true,
+		"incremental": true
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "**/*.spec.ts"]

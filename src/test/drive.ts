@@ -5,8 +5,8 @@ import {
 	dump_drive_files,
 	import_diary,
 	list_files,
-} from '../util/google_driver';
-import { get_settings, open_diary, save_diary } from '../util/file';
+} from '../google_driver';
+import { get_settings, open_diary, save_diary } from '../file_system';
 import { promises as fsp } from 'fs';
 
 /**

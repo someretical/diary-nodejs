@@ -1,15 +1,10 @@
 /* eslint-disable no-console */
-import {
-	BACKUP_PATH,
-	DIARY_PATH,
-	FILE_VERSION,
-	JSONDiary,
-} from '../util/types';
-import { decrypt, encrypt, hash_key } from '../util/encryptor';
-import { gzip, unzip } from '../util/zipper';
+import { BACKUP_PATH, DIARY_PATH, FILE_VERSION, JSONDiary } from '../types';
+import { decrypt, encrypt, hash_key } from '../encryptor';
+import { gzip, unzip } from '../zipper';
 import { assert } from 'console';
 import { promises as fsp } from 'fs';
-import { migratev1 } from '../util/moodflow_migrator';
+import { migratev1 } from '../moodflow_migrator';
 
 /**
  * Tests the encryption and decryption of files

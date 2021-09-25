@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import * as fs from 'fs';
+import * as inquirer from 'inquirer';
 import * as path from 'path';
-import * as readline from 'readline';
 import * as stream from 'stream';
 import {
 	BACKUP_NAME,
@@ -24,7 +24,7 @@ import { OAuth2Client } from 'google-auth-library';
  * client_secret.json is not actually secret in this case
  * See https://developers.google.com/identity/protocols/oauth2
  */
-import credentials from '../client_secret.json';
+import credentials from './client_secret.json';
 
 import { promises as fsp } from 'fs';
 import { google } from 'googleapis';
@@ -81,38 +81,16 @@ export const get_access_token = async (
 		scope: SCOPES,
 	});
 
-	console.log('Authorization URL (paste into browser):', authUrl);
-
-	const rl = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout,
-	});
-
-	/**
-	 * Begin copy pasted code to promisify rl.question
-	 * I don't believe this implementation supports aborting
-	 * see https://nodejs.org/api/readline.html#readline_rl_question_query_options_callback
-	 * code taken from https://gist.github.com/januswel/c1634511a88ed2ce4c32d1763a8b0402
-	 */
-	const q = rl.question as unknown as {
-		[promisify.custom]: (question: string) => Promise<string>;
-	};
-
-	q[promisify.custom] = (question: string) =>
-		new Promise<string>(resolve => {
-			rl.question(question, input => {
-				resolve(input);
-			});
-		}).finally(() => {
-			rl.close();
-		});
-
-	const question = promisify(rl.question) as unknown as (
-		q: string
-	) => Promise<string>;
-	// End copy pasted code to promisify rl.question
-
-	const code = await question('Access token: ');
+	console.log('[*] Authorization URL (paste into browser):', authUrl);
+	console.log('[*] Please paste the access code below.');
+	const { code } = await inquirer.prompt([
+		{
+			name: 'code',
+			message: '[>]',
+			prefix: '',
+			suffix: '',
+		},
+	]);
 
 	const data = await oauth2client.getToken({ code });
 

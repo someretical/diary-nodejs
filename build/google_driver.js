@@ -24,11 +24,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.dump_drive_files = exports.wipe_drive_files = exports.upload_diary = exports.import_diary = exports.list_files = exports.get_access_token = exports.authorize = exports.check_scopes = void 0;
 const fs = __importStar(require("fs"));
+const inquirer = __importStar(require("inquirer"));
 const path = __importStar(require("path"));
-const readline = __importStar(require("readline"));
 const stream = __importStar(require("stream"));
 const types_1 = require("./types");
-const client_secret_json_1 = __importDefault(require("../client_secret.json"));
+const client_secret_json_1 = __importDefault(require("./client_secret.json"));
 const fs_1 = require("fs");
 const googleapis_1 = require("googleapis");
 const util_1 = require("util");
@@ -59,21 +59,16 @@ const get_access_token = async (oauth2client) => {
         access_type: 'offline',
         scope: types_1.SCOPES,
     });
-    console.log('Authorization URL (paste into browser):', authUrl);
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-    });
-    const q = rl.question;
-    q[util_1.promisify.custom] = (question) => new Promise(resolve => {
-        rl.question(question, input => {
-            resolve(input);
-        });
-    }).finally(() => {
-        rl.close();
-    });
-    const question = (0, util_1.promisify)(rl.question);
-    const code = await question('Access token: ');
+    console.log('[*] Authorization URL (paste into browser):', authUrl);
+    console.log('[*] Please paste the access code below.');
+    const { code } = await inquirer.prompt([
+        {
+            name: 'code',
+            message: '[>]',
+            prefix: '',
+            suffix: '',
+        },
+    ]);
     const data = await oauth2client.getToken({ code });
     oauth2client.setCredentials(data.tokens);
     await fs_1.promises.writeFile(types_1.TOKEN_PATH, JSON.stringify(data));

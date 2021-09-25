@@ -1,3 +1,5 @@
+import { OAuth2Client } from 'google-auth-library';
+
 export const SETTINGS_PATH = './data/settings.json';
 
 export const TOKEN_PATH = './data/credentials.json';
@@ -81,4 +83,11 @@ export interface Settings {
 export interface OpenDiary {
 	key: string | null;
 	diary: JSONDiary;
+}
+
+export interface DataContainer {
+	opened_diary?: OpenDiary;
+	settings?: Settings;
+	client?: OAuth2Client;
+	changes_made: boolean;
 }

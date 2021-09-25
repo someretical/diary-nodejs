@@ -21,14 +21,13 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.save_diary = exports.open_diary = exports.get_settings = void 0;
 const fs = __importStar(require("fs"));
+const inquirer = __importStar(require("inquirer"));
 const types_1 = require("./types");
 const encryptor_1 = require("./encryptor");
 const zipper_1 = require("./zipper");
 const fs_1 = require("fs");
 const stream_1 = require("stream");
 const util_1 = require("util");
-const __1 = require("..");
-const google_driver_1 = require("./google_driver");
 const _pipe = (0, util_1.promisify)(stream_1.pipeline);
 const get_settings = async () => {
     try {
@@ -58,22 +57,38 @@ const open_diary = async () => {
     };
     try {
         unzipped = await (0, zipper_1.unzip)(types_1.DIARY_PATH);
+        console.log('[*] Local diary found. Opening...');
     }
     catch (err) {
         try {
             unzipped = await (0, zipper_1.unzip)(types_1.BACKUP_PATH);
+            console.log('[*] Local diary found. Opening...');
         }
-        catch (err) { }
+        catch (err) {
+            console.log('[*] No existing diary was found. A new one will be created.');
+        }
     }
-    const prompt = async () => {
-        pwd = await (0, __1.prompt_pwd)();
+    const prompt_pwd = async () => {
+        const answer = await inquirer.prompt([
+            {
+                type: 'password',
+                message: '[>]',
+                name: 'pwd',
+                mask: '*',
+                prefix: '',
+                suffix: '',
+            },
+        ]);
+        if (!answer.pwd)
+            throw new Error();
+        pwd = (0, encryptor_1.hash_key)(answer.pwd);
         try {
-            const tmp = (0, encryptor_1.decrypt)(unzipped || Buffer.from(''), (0, encryptor_1.hash_key)(pwd));
+            const tmp = (0, encryptor_1.decrypt)(unzipped || Buffer.from(''), pwd);
             return { diary: JSON.parse(tmp.toString('utf8')), key: pwd };
         }
         catch (err) {
-            console.log('Wrong password.');
-            return prompt();
+            console.log('[!] Wrong password. To overwrite the local diary, abort this command and type `new`');
+            return prompt_pwd();
         }
     };
     if (unzipped !== null) {
@@ -82,7 +97,8 @@ const open_diary = async () => {
             return { diary: tmp, key: pwd };
         }
         catch (err) {
-            return prompt();
+            console.log('[*] Please enter the password. To abort this command, simply type nothing and press enter.');
+            return prompt_pwd();
         }
     }
     else {
@@ -90,16 +106,16 @@ const open_diary = async () => {
     }
 };
 exports.open_diary = open_diary;
-const save_diary = async (open_diary, settings, oauth2client) => {
-    const src = fs.createReadStream(types_1.DIARY_PATH);
-    const dest = fs.createWriteStream(types_1.BACKUP_PATH);
-    await _pipe(src, dest);
+const save_diary = async (open_diary) => {
+    try {
+        const src = fs.createReadStream(types_1.DIARY_PATH);
+        const dest = fs.createWriteStream(types_1.BACKUP_PATH);
+        await _pipe(src, dest);
+    }
+    catch (err) { }
     let encrypted = Buffer.from(JSON.stringify(open_diary.diary));
     if (open_diary.key !== null)
-        encrypted = (0, encryptor_1.encrypt)(encrypted, (0, encryptor_1.hash_key)(open_diary.key));
+        encrypted = (0, encryptor_1.encrypt)(encrypted, open_diary.key);
     await (0, zipper_1.gzip)(types_1.DIARY_PATH, encrypted);
-    if (settings.sync) {
-        await (0, google_driver_1.upload_diary)(oauth2client, settings);
-    }
 };
 exports.save_diary = save_diary;

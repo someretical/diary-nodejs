@@ -1,11 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const types_1 = require("../util/types");
-const encryptor_1 = require("../util/encryptor");
-const zipper_1 = require("../util/zipper");
+const types_1 = require("../types");
+const encryptor_1 = require("../encryptor");
+const zipper_1 = require("../zipper");
 const console_1 = require("console");
 const fs_1 = require("fs");
-const moodflow_migrator_1 = require("../util/moodflow_migrator");
+const moodflow_migrator_1 = require("../moodflow_migrator");
 exports.default = async (pwd) => {
     try {
         await fs_1.promises.mkdir('./data');
