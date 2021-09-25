@@ -1,15 +1,17 @@
 /* eslint-disable no-console */
-import { main as drive } from './drive';
-import { main as encryption } from './encryption';
+import drive from './drive';
+import encryption from './encryption';
 
 /**
- * driver function to run all the tests
+ * Driver function to run all the tests
  */
 const main = async () => {
-	console.log('running encryption() ...');
-	await encryption();
+	const pwd = 'abc123';
 
-	console.log('running drive() ...');
+	console.log('Running encryption()...');
+	await encryption(pwd);
+
+	console.log('Running drive()...');
 	drive();
 };
 

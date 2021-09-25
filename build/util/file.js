@@ -72,6 +72,7 @@ const open_diary = async () => {
             return { diary: JSON.parse(tmp.toString('utf8')), key: pwd };
         }
         catch (err) {
+            console.log('Wrong password.');
             return prompt();
         }
     };

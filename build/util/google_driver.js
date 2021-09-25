@@ -22,8 +22,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.upload_diary = exports.import_diary = exports.list_files = exports.get_access_token = exports.authorize = exports.check_scopes = void 0;
+exports.dump_drive_files = exports.wipe_drive_files = exports.upload_diary = exports.import_diary = exports.list_files = exports.get_access_token = exports.authorize = exports.check_scopes = void 0;
 const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 const readline = __importStar(require("readline"));
 const stream = __importStar(require("stream"));
 const types_1 = require("./types");
@@ -58,7 +59,7 @@ const get_access_token = async (oauth2client) => {
         access_type: 'offline',
         scope: types_1.SCOPES,
     });
-    console.log('auth url:', authUrl);
+    console.log('Authorization URL (paste into browser):', authUrl);
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
@@ -72,7 +73,7 @@ const get_access_token = async (oauth2client) => {
         rl.close();
     });
     const question = (0, util_1.promisify)(rl.question);
-    const code = await question('code: ');
+    const code = await question('Access token: ');
     const data = await oauth2client.getToken({ code });
     oauth2client.setCredentials(data.tokens);
     await fs_1.promises.writeFile(types_1.TOKEN_PATH, JSON.stringify(data));
@@ -83,18 +84,19 @@ const list_files = async (oauth2client) => {
     const drive = googleapis_1.google.drive({ version: 'v3', auth: oauth2client });
     const res = await drive.files.list({
         pageSize: 100,
-        fields: 'nextPageToken, files(id, name)',
+        fields: 'files(id, name)',
         spaces: 'appDataFolder',
     });
     const files = res.data.files;
     if (files?.length) {
-        console.log('Files:');
+        console.log('Files on google drive:');
         files.map(file => {
             console.log(`${file.name} (${file.id})`);
         });
+        console.log('\n');
     }
     else {
-        console.log('no files found');
+        console.log('No files found.\n');
     }
 };
 exports.list_files = list_files;
@@ -103,7 +105,7 @@ const import_diary = async (oauth2client, settings) => {
     let successful = false;
     const { data: diary_dat_list } = await drive.files.list({
         q: `name = '${types_1.DIARY_NAME}'`,
-        fields: 'nextPageToken, files(id)',
+        fields: 'files(id)',
         spaces: 'appDataFolder',
         pageSize: 1,
     });
@@ -111,6 +113,7 @@ const import_diary = async (oauth2client, settings) => {
         const dest = fs.createWriteStream(types_1.DIARY_PATH);
         const source = await drive.files.get({
             fileId: diary_dat_list.files[0].id,
+            alt: 'media',
         }, { responseType: 'stream' });
         await _pipe(source.data, dest);
         settings.backup1_id = diary_dat_list.files[0].id;
@@ -118,7 +121,7 @@ const import_diary = async (oauth2client, settings) => {
     }
     const { data: diary_bak_list } = await drive.files.list({
         q: `name = '${types_1.BACKUP_NAME}'`,
-        fields: 'nextPageToken, files(id)',
+        fields: 'files(id)',
         spaces: 'appDataFolder',
         pageSize: 1,
     });
@@ -132,6 +135,7 @@ const import_diary = async (oauth2client, settings) => {
         const dest = fs.createWriteStream(types_1.DIARY_PATH);
         const source = await drive.files.get({
             fileId: diary_bak_list.files[0].id,
+            alt: 'media',
         }, { responseType: 'stream' });
         await _pipe(source.data, dest);
         settings.backup1_id = diary_bak_list.files[0].id;
@@ -177,24 +181,48 @@ const upload_diary = async (oauth2client, settings) => {
         }
     }
     catch (err) {
-        const { data } = await drive.files.list({
-            fields: 'nextPageToken, files(id)',
-            spaces: 'appDataFolder',
-            pageSize: 10,
-        });
-        if (data.files) {
-            const _delete = drive.files.delete();
-            const promises = [];
-            for (const file of data.files) {
-                promises.push(_delete({
-                    fileId: file.id || undefined,
-                }));
-            }
-            await Promise.all(promises);
-        }
+        await (0, exports.wipe_drive_files)(drive);
     }
     const { data: new_diary_dat } = await direct_diary_upload(drive);
     settings.backup1_id = new_diary_dat.id;
     await fs_1.promises.writeFile(types_1.SETTINGS_PATH, JSON.stringify(settings));
 };
 exports.upload_diary = upload_diary;
+const wipe_drive_files = async (drive) => {
+    const { data } = await drive.files.list({
+        fields: 'files(id)',
+        spaces: 'appDataFolder',
+        pageSize: 100,
+    });
+    const _delete = drive.files.delete();
+    const promises = [];
+    if (data.files) {
+        for (const file of data.files) {
+            promises.push(_delete({
+                fileId: file.id || undefined,
+            }));
+        }
+    }
+    return Promise.all(promises);
+};
+exports.wipe_drive_files = wipe_drive_files;
+const dump_drive_files = async (oauth2client, location) => {
+    const drive = googleapis_1.google.drive({ version: 'v3', auth: oauth2client });
+    const { data } = await drive.files.list({
+        fields: 'files(name, id)',
+        spaces: 'appDataFolder',
+        pageSize: 100,
+    });
+    if (data.files) {
+        for (const file of data.files) {
+            const dest_location = path.join(location, `${file.id}_${file.name}`);
+            const dest = fs.createWriteStream(dest_location);
+            const source = await drive.files.get({
+                fileId: file.id || '',
+                alt: 'media',
+            }, { responseType: 'stream' });
+            await _pipe(source.data, dest);
+        }
+    }
+};
+exports.dump_drive_files = dump_drive_files;

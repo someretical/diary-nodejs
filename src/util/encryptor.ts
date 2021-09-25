@@ -1,22 +1,23 @@
-// adapted from https://medium.com/@anned20/encrypting-files-with-nodejs-a54a0736a50a
+// Adapted from https://medium.com/@anned20/encrypting-files-with-nodejs-a54a0736a50a
 import * as crypto from 'crypto';
 
 /**
- * gets the hash of the password
+ * Gets the hash of the password
  */
 export const hash_key = (
 	key: string,
 	hash = 'sha256',
 	digest: crypto.BinaryToTextEncoding = 'base64'
 ): string =>
-	/** since the user provided password will not likely be 32 characters (256 bits) long,
+	/**
+	 * Since the user provided password will not likely be 32 characters (256 bits) long,
 	 * it needs to be hashed first to obtain 256 bits of data to represent it
 	 * aes-256-cbc requires an iv that is 256 bits long
 	 */
 	crypto.createHash(hash).update(String(key)).digest(digest).substr(0, 32);
 
 /**
- * encrypts a buffer with the password
+ * Encrypts a buffer with the password
  */
 export const encrypt = (
 	buffer: Buffer,
@@ -35,7 +36,7 @@ export const encrypt = (
 };
 
 /**
- * attempts to decrypt a buffer with the password
+ * Attempts to decrypt a buffer with the password
  */
 export const decrypt = (
 	buffer: Buffer,

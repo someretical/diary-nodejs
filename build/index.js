@@ -36,7 +36,7 @@ const prompt_pwd = async () => {
         rl.close();
     });
     const question = (0, util_1.promisify)(rl.question);
-    const pwd = (await question('password: ')) || 'a very secret key';
+    const pwd = await question('Password: ');
     return pwd;
 };
 exports.prompt_pwd = prompt_pwd;

@@ -37,7 +37,7 @@ export const prompt_pwd = async (): Promise<string> => {
 	) => Promise<string>;
 	// end copy pasted code to promisify rl.question
 
-	const pwd = (await question('password: ')) || 'a very secret key';
+	const pwd = await question('Password: ');
 
 	return pwd;
 };

@@ -8,13 +8,13 @@ const _pipe = promisify(stream.pipeline);
 const _unzip = promisify(zlib.unzip);
 
 /**
- * unzips a gzipped file
+ * Unzips a gzipped file
  */
 export const unzip = async (location: string): Promise<Buffer> =>
 	_unzip(await fsp.readFile(location));
 
 /**
- * saves a file with gzip compression
+ * Saves a file with gzip compression
  */
 export const gzip = async (
 	location: string,
@@ -24,7 +24,9 @@ export const gzip = async (
 	const gzip = zlib.createGzip();
 	const destination = fs.createWriteStream(location, encoding);
 
-	// buffer !== readable stream so Readable is needed to convert the provided buffer
-	// https://stackoverflow.com/q/13230487
+	/**
+	 * buffer !== readable stream so Readable is needed to convert the provided buffer
+	 * https://stackoverflow.com/q/13230487
+	 */
 	return _pipe(stream.Readable.from(source), gzip, destination);
 };

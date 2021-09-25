@@ -20,7 +20,7 @@ import { upload_diary } from './google_driver';
 const _pipe = promisify(pipeline);
 
 /**
- * initilizes settings.json
+ * Initilizes settings.json
  */
 export const get_settings = async (): Promise<Settings> => {
 	try {
@@ -40,7 +40,7 @@ export const get_settings = async (): Promise<Settings> => {
 };
 
 /**
- * opens the local diary AND reads from local backups if necessary
+ * Opens the local diary AND reads from local backups if necessary
  *
  * try to open diary.dat
  * try to open diary.bak.dat
@@ -79,12 +79,13 @@ export const open_diary = async (): Promise<OpenDiary> => {
 		try {
 			/**
 			 * unzipped will always be truthy
-			 * the || Buffer.from('') is just there to shut typescript up :^)
+			 * The || Buffer.from('') is just there to shut typescript up :^)
 			 */
 			const tmp = decrypt(unzipped || Buffer.from(''), hash_key(pwd));
 
 			return { diary: JSON.parse(tmp.toString('utf8')), key: pwd };
 		} catch (err) {
+			console.log('Wrong password.');
 			return prompt();
 		}
 	};
@@ -102,7 +103,7 @@ export const open_diary = async (): Promise<OpenDiary> => {
 };
 
 /**
- * saves the currently open diary AND uploads to google drive if sync is enabled
+ * Saves the currently open diary AND uploads to google drive if sync is enabled
  *
  * copy diary.dat to diary.dat.bak
  * save current version as diary.dat

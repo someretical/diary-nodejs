@@ -3,7 +3,7 @@ import { DailyEntry, JSONDiary, MonthHolder, YearHolder } from './types';
 import { promises as fsp } from 'fs';
 
 /**
- * migrates moodflow json to file version 1
+ * Migrates moodflow json to file version 1
  */
 export const migratev1 = async (
 	location = './data/moodflow_backup.json'
