@@ -23,16 +23,19 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.dump_drive_files = exports.wipe_drive_files = exports.upload_diary = exports.import_diary = exports.list_files = exports.get_access_token = exports.authorize = exports.check_scopes = void 0;
-const fs = __importStar(require("fs"));
-const inquirer = __importStar(require("inquirer"));
-const path = __importStar(require("path"));
-const stream = __importStar(require("stream"));
+const p = __importStar(require("./prompts"));
 const types_1 = require("./types");
+const clipboardy_1 = __importDefault(require("clipboardy"));
+const fs_1 = __importDefault(require("fs"));
+const inquirer_1 = __importDefault(require("inquirer"));
+const path_1 = __importDefault(require("path"));
+const stream_1 = __importDefault(require("stream"));
 const client_secret_json_1 = __importDefault(require("./client_secret.json"));
-const fs_1 = require("fs");
+const fs_2 = require("fs");
 const googleapis_1 = require("googleapis");
+const cli_1 = require("./cli");
 const util_1 = require("util");
-const _pipe = (0, util_1.promisify)(stream.pipeline);
+const _pipe = (0, util_1.promisify)(stream_1.default.pipeline);
 const check_scopes = async (oauth2client, cmp_scopes = types_1.SCOPES) => {
     const { token } = await oauth2client.getAccessToken();
     if (!token)
@@ -45,7 +48,7 @@ const authorize = async () => {
     const { client_secret, client_id, redirect_uris } = client_secret_json_1.default.installed;
     const oauth2client = new googleapis_1.google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
     try {
-        const data = await fs_1.promises.readFile(types_1.TOKEN_PATH);
+        const data = await fs_2.promises.readFile(types_1.TOKEN_PATH);
         oauth2client.setCredentials(JSON.parse(data.toString('utf8')).tokens);
         return oauth2client;
     }
@@ -55,23 +58,26 @@ const authorize = async () => {
 };
 exports.authorize = authorize;
 const get_access_token = async (oauth2client) => {
-    const authUrl = oauth2client.generateAuthUrl({
+    const auth_url = oauth2client.generateAuthUrl({
         access_type: 'offline',
         scope: types_1.SCOPES,
     });
-    console.log('[*] Authorization URL (paste into browser):', authUrl);
-    console.log('[*] Please paste the access code below.');
-    const { code } = await inquirer.prompt([
+    (0, cli_1.info)({ changes_made: false }, p.AUTH_CONFIRM[0] + auth_url);
+    (0, cli_1.info)({ changes_made: false }, p.AUTH_CONFIRM[1]);
+    await clipboardy_1.default.write(auth_url);
+    const { code } = await inquirer_1.default.prompt([
         {
+            type: 'password',
             name: 'code',
             message: '[>]',
+            mask: '*',
             prefix: '',
             suffix: '',
         },
     ]);
     const data = await oauth2client.getToken({ code });
     oauth2client.setCredentials(data.tokens);
-    await fs_1.promises.writeFile(types_1.TOKEN_PATH, JSON.stringify(data));
+    await fs_2.promises.writeFile(types_1.TOKEN_PATH, JSON.stringify(data));
     return oauth2client;
 };
 exports.get_access_token = get_access_token;
@@ -105,7 +111,7 @@ const import_diary = async (oauth2client, settings) => {
         pageSize: 1,
     });
     if (diary_dat_list.files?.[0].id) {
-        const dest = fs.createWriteStream(types_1.DIARY_PATH);
+        const dest = fs_1.default.createWriteStream(types_1.DIARY_PATH);
         const source = await drive.files.get({
             fileId: diary_dat_list.files[0].id,
             alt: 'media',
@@ -127,7 +133,7 @@ const import_diary = async (oauth2client, settings) => {
                 name: types_1.DIARY_NAME,
             },
         });
-        const dest = fs.createWriteStream(types_1.DIARY_PATH);
+        const dest = fs_1.default.createWriteStream(types_1.DIARY_PATH);
         const source = await drive.files.get({
             fileId: diary_bak_list.files[0].id,
             alt: 'media',
@@ -140,7 +146,7 @@ const import_diary = async (oauth2client, settings) => {
         settings.backup2_id = diary_bak_list.files[0].id;
     }
     if (successful)
-        await fs_1.promises.writeFile(types_1.SETTINGS_PATH, JSON.stringify(settings));
+        await fs_2.promises.writeFile(types_1.SETTINGS_PATH, JSON.stringify(settings));
     return successful;
 };
 exports.import_diary = import_diary;
@@ -150,7 +156,7 @@ const direct_diary_upload = async (drive) => drive.files.create({
         parents: ['appDataFolder'],
     },
     media: {
-        body: fs.createReadStream(types_1.DIARY_PATH),
+        body: fs_1.default.createReadStream(types_1.DIARY_PATH),
     },
 });
 const upload_diary = async (oauth2client, settings) => {
@@ -180,7 +186,7 @@ const upload_diary = async (oauth2client, settings) => {
     }
     const { data: new_diary_dat } = await direct_diary_upload(drive);
     settings.backup1_id = new_diary_dat.id;
-    await fs_1.promises.writeFile(types_1.SETTINGS_PATH, JSON.stringify(settings));
+    await fs_2.promises.writeFile(types_1.SETTINGS_PATH, JSON.stringify(settings));
 };
 exports.upload_diary = upload_diary;
 const wipe_drive_files = async (drive) => {
@@ -210,8 +216,8 @@ const dump_drive_files = async (oauth2client, location) => {
     });
     if (data.files) {
         for (const file of data.files) {
-            const dest_location = path.join(location, `${file.id}_${file.name}`);
-            const dest = fs.createWriteStream(dest_location);
+            const dest_location = path_1.default.join(location, `${file.id}_${file.name}`);
+            const dest = fs_1.default.createWriteStream(dest_location);
             const source = await drive.files.get({
                 fileId: file.id || '',
                 alt: 'media',

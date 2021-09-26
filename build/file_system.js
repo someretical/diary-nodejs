@@ -18,20 +18,25 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.save_diary = exports.open_diary = exports.get_settings = void 0;
-const fs = __importStar(require("fs"));
-const inquirer = __importStar(require("inquirer"));
+const p = __importStar(require("./prompts"));
 const types_1 = require("./types");
 const encryptor_1 = require("./encryptor");
 const zipper_1 = require("./zipper");
-const fs_1 = require("fs");
+const cli_1 = require("./cli");
+const fs_1 = __importDefault(require("fs"));
+const fs_2 = require("fs");
+const inquirer_1 = __importDefault(require("inquirer"));
 const stream_1 = require("stream");
 const util_1 = require("util");
 const _pipe = (0, util_1.promisify)(stream_1.pipeline);
 const get_settings = async () => {
     try {
-        const settings = await fs_1.promises.readFile(types_1.SETTINGS_PATH);
+        const settings = await fs_2.promises.readFile(types_1.SETTINGS_PATH);
         return JSON.parse(settings.toString('utf8'));
     }
     catch (err) {
@@ -40,7 +45,7 @@ const get_settings = async () => {
             backup1_id: null,
             backup2_id: null,
         };
-        await fs_1.promises.writeFile(types_1.SETTINGS_PATH, JSON.stringify(settings));
+        await fs_2.promises.writeFile(types_1.SETTINGS_PATH, JSON.stringify(settings));
         return settings;
     }
 };
@@ -57,19 +62,19 @@ const open_diary = async () => {
     };
     try {
         unzipped = await (0, zipper_1.unzip)(types_1.DIARY_PATH);
-        console.log('[*] Local diary found. Opening...');
+        (0, cli_1.info)({ changes_made: false }, p.LOCAL_DIARY_FOUND);
     }
     catch (err) {
         try {
             unzipped = await (0, zipper_1.unzip)(types_1.BACKUP_PATH);
-            console.log('[*] Local diary found. Opening...');
+            (0, cli_1.info)({ changes_made: false }, p.LOCAL_DIARY_FOUND);
         }
         catch (err) {
-            console.log('[*] No existing diary was found. A new one will be created.');
+            (0, cli_1.info)({ changes_made: false }, p.LOCAL_DIARY_NOT_FOUND);
         }
     }
     const prompt_pwd = async () => {
-        const answer = await inquirer.prompt([
+        const answer = await inquirer_1.default.prompt([
             {
                 type: 'password',
                 message: '[>]',
@@ -87,7 +92,7 @@ const open_diary = async () => {
             return { diary: JSON.parse(tmp.toString('utf8')), key: pwd };
         }
         catch (err) {
-            console.log('[!] Wrong password. To overwrite the local diary, abort this command and type `new`');
+            (0, cli_1.warn)({ changes_made: false }, p.WRONG_PWD);
             return prompt_pwd();
         }
     };
@@ -97,7 +102,7 @@ const open_diary = async () => {
             return { diary: tmp, key: pwd };
         }
         catch (err) {
-            console.log('[*] Please enter the password. To abort this command, simply type nothing and press enter.');
+            (0, cli_1.info)({ changes_made: false }, p.ENTER_PWD);
             return prompt_pwd();
         }
     }
@@ -108,8 +113,8 @@ const open_diary = async () => {
 exports.open_diary = open_diary;
 const save_diary = async (open_diary) => {
     try {
-        const src = fs.createReadStream(types_1.DIARY_PATH);
-        const dest = fs.createWriteStream(types_1.BACKUP_PATH);
+        const src = fs_1.default.createReadStream(types_1.DIARY_PATH);
+        const dest = fs_1.default.createWriteStream(types_1.BACKUP_PATH);
         await _pipe(src, dest);
     }
     catch (err) { }

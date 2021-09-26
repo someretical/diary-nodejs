@@ -1,5 +1,5 @@
 // Adapted from https://medium.com/@anned20/encrypting-files-with-nodejs-a54a0736a50a
-import * as crypto from 'crypto';
+import crypto from 'crypto';
 
 /**
  * Gets the hash of the password

@@ -1,8 +1,8 @@
-import * as fs from 'fs';
-import * as stream from 'stream';
-import * as zlib from 'zlib';
+import fs from 'fs';
 import { promises as fsp } from 'fs';
 import { promisify } from 'util';
+import stream from 'stream';
+import zlib from 'zlib';
 
 const _pipe = promisify(stream.pipeline);
 const _unzip = promisify(zlib.unzip);

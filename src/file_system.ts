@@ -1,5 +1,4 @@
-import * as fs from 'fs';
-import * as inquirer from 'inquirer';
+import * as p from './prompts';
 import {
 	BACKUP_PATH,
 	DIARY_PATH,
@@ -11,7 +10,10 @@ import {
 } from './types';
 import { decrypt, encrypt, hash_key } from './encryptor';
 import { gzip, unzip } from './zipper';
+import { info, warn } from './cli';
+import fs from 'fs';
 import { promises as fsp } from 'fs';
+import inquirer from 'inquirer';
 import { pipeline } from 'stream';
 import { promisify } from 'util';
 
@@ -64,16 +66,14 @@ export const open_diary = async (): Promise<OpenDiary> => {
 
 	try {
 		unzipped = await unzip(DIARY_PATH);
-		console.log('[*] Local diary found. Opening...');
+		info({ changes_made: false }, p.LOCAL_DIARY_FOUND);
 	} catch (err) {
 		try {
 			unzipped = await unzip(BACKUP_PATH);
-			console.log('[*] Local diary found. Opening...');
+			info({ changes_made: false }, p.LOCAL_DIARY_FOUND);
 			// eslint-disable-next-line no-empty
 		} catch (err) {
-			console.log(
-				'[*] No existing diary was found. A new one will be created.'
-			);
+			info({ changes_made: false }, p.LOCAL_DIARY_NOT_FOUND);
 		}
 	}
 
@@ -102,9 +102,7 @@ export const open_diary = async (): Promise<OpenDiary> => {
 
 			return { diary: JSON.parse(tmp.toString('utf8')), key: pwd };
 		} catch (err) {
-			console.log(
-				'[!] Wrong password. To overwrite the local diary, abort this command and type `new`'
-			);
+			warn({ changes_made: false }, p.WRONG_PWD);
 			return prompt_pwd();
 		}
 	};
@@ -114,9 +112,7 @@ export const open_diary = async (): Promise<OpenDiary> => {
 			const tmp = JSON.parse(unzipped.toString('utf8'));
 			return { diary: tmp, key: pwd };
 		} catch (err) {
-			console.log(
-				'[*] Please enter the password. To abort this command, simply type nothing and press enter.'
-			);
+			info({ changes_made: false }, p.ENTER_PWD);
 			return prompt_pwd();
 		}
 	} else {

@@ -1,8 +1,5 @@
 /* eslint-disable no-console */
-import * as fs from 'fs';
-import * as inquirer from 'inquirer';
-import * as path from 'path';
-import * as stream from 'stream';
+import * as p from './prompts';
 import {
 	BACKUP_NAME,
 	DIARY_NAME,
@@ -19,6 +16,11 @@ import {
 } from 'googleapis/build/src/apis/drive';
 import { GaxiosResponse } from 'gaxios';
 import { OAuth2Client } from 'google-auth-library';
+import clipboardy from 'clipboardy';
+import fs, { write } from 'fs';
+import inquirer from 'inquirer';
+import path from 'path';
+import stream from 'stream';
 
 /**
  * client_secret.json is not actually secret in this case
@@ -28,6 +30,7 @@ import credentials from './client_secret.json';
 
 import { promises as fsp } from 'fs';
 import { google } from 'googleapis';
+import { info } from './cli';
 import { promisify } from 'util';
 
 const _pipe = promisify(stream.pipeline);
@@ -76,17 +79,22 @@ export const authorize = async (): Promise<OAuth2Client> => {
 export const get_access_token = async (
 	oauth2client: OAuth2Client
 ): Promise<OAuth2Client> => {
-	const authUrl = oauth2client.generateAuthUrl({
+	const auth_url = oauth2client.generateAuthUrl({
 		access_type: 'offline',
 		scope: SCOPES,
 	});
 
-	console.log('[*] Authorization URL (paste into browser):', authUrl);
-	console.log('[*] Please paste the access code below.');
+	info({ changes_made: false }, p.AUTH_CONFIRM[0] + auth_url);
+	info({ changes_made: false }, p.AUTH_CONFIRM[1]);
+
+	await clipboardy.write(auth_url);
+
 	const { code } = await inquirer.prompt([
 		{
+			type: 'password',
 			name: 'code',
 			message: '[>]',
+			mask: '*',
 			prefix: '',
 			suffix: '',
 		},

@@ -18,18 +18,23 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs = __importStar(require("fs"));
-const inquirer = __importStar(require("inquirer"));
+const p = __importStar(require("./prompts"));
 const types_1 = require("./types");
 const google_driver_1 = require("./google_driver");
+const cli_1 = require("./cli");
 const file_system_1 = require("./file_system");
-const fs_1 = require("fs");
+const fs_1 = __importDefault(require("fs"));
+const fs_2 = require("fs");
 const encryptor_1 = require("./encryptor");
-const default_cli = (d) => console.log(d.opened_diary ? '[!D]' : '[!]', 'Unknown command.');
+const inquirer_1 = __importDefault(require("inquirer"));
+const default_cli = (d) => (0, cli_1.warn)(d, p.UNKNOWN_CMD);
 const make_new_diary = (d) => {
     d.changes_made = true;
-    console.log('[*] A new diary was created. Type `help` to see new commands.');
+    (0, cli_1.info)(d, p.DIARY_CREATE);
     return {
         key: null,
         diary: {
@@ -43,23 +48,20 @@ const make_new_diary = (d) => {
     };
 };
 const help_cli = (d) => {
-    if (!d.opened_diary) {
-        console.log('[*] Commands: `help` `import` `new` `open` `quit`');
-    }
-    else {
-        console.log('[*D] Commands: `close` `help` `pwd` `quit` `sync`');
-    }
+    if (!d.opened_diary)
+        (0, cli_1.info)(d, p.HELP_DIARY_CLOSED);
+    else
+        (0, cli_1.info)(d, p.HELP_DIARY_OPEN);
 };
 const open_cli = async (d) => {
     if (d.opened_diary)
         return default_cli(d);
     try {
-        console.log('[*] Finding local diary...');
         d.opened_diary = await (0, file_system_1.open_diary)();
-        console.log('[*] Diary opened. Type `help` to see new commands.');
+        (0, cli_1.success)(d, p.OPENED_DIARY);
     }
     catch (err) {
-        console.log('[*] Aborted.');
+        (0, cli_1.success)(d, p.ABORTED);
     }
 };
 const new_diary_cli = async (d) => {
@@ -67,15 +69,15 @@ const new_diary_cli = async (d) => {
         return default_cli(d);
     let exists;
     try {
-        await fs_1.promises.access(types_1.DIARY_PATH, fs.constants.F_OK);
+        await fs_2.promises.access(types_1.DIARY_PATH, fs_1.default.constants.F_OK);
         exists = true;
     }
     catch (err) {
         exists = false;
     }
     if (exists) {
-        console.log('[*] Are you sure you want to overwrite the existing diary?');
-        const { proceed } = await inquirer.prompt([
+        (0, cli_1.info)(d, p.ASK_OVERWRITE);
+        const { proceed } = await inquirer_1.default.prompt([
             {
                 type: 'confirm',
                 name: 'proceed',
@@ -85,12 +87,10 @@ const new_diary_cli = async (d) => {
                 suffix: '',
             },
         ]);
-        if (proceed) {
+        if (proceed)
             d.opened_diary = make_new_diary(d);
-        }
-        else {
-            console.log('[*] No new diary was created.');
-        }
+        else
+            (0, cli_1.success)(d, p.ABORTED);
     }
     else {
         d.opened_diary = make_new_diary(d);
@@ -102,10 +102,9 @@ const real_import_diary = async (d) => {
     }
     catch (err) { }
     if (!d.client || !(await (0, google_driver_1.check_scopes)(d.client))) {
-        console.log('[!] Failed to retrieve an access token. If this was not intentional, make sure you check all permissions needed by the app during the authorization process.');
+        (0, cli_1.err)(d, p.GAPI_ERR, 'Failed at authorize() in real_import_diary.');
     }
     else {
-        console.log('[*] Authorization confirmed. Downloading diary...');
         let imported = false;
         if (d.settings) {
             d.settings.sync = true;
@@ -115,10 +114,10 @@ const real_import_diary = async (d) => {
             catch (err) { }
         }
         if (!imported) {
-            console.log('[!] Failed to download the diary. This could be because there were no files in Google Drive. Type `new` to create a new diary.');
+            (0, cli_1.warn)(d, p.DOWNLOAD_FAIL);
         }
         else {
-            console.log('[*] Successfully downloaded diary from Google Drive.');
+            (0, cli_1.success)(d, p.DOWNLOAD_SUCCESS);
             await open_cli(d);
         }
     }
@@ -128,15 +127,15 @@ const import_diary_cli = async (d) => {
         return default_cli(d);
     let exists;
     try {
-        await fs_1.promises.access(types_1.DIARY_PATH, fs.constants.F_OK);
+        await fs_2.promises.access(types_1.DIARY_PATH, fs_1.default.constants.F_OK);
         exists = true;
     }
     catch (err) {
         exists = false;
     }
     if (exists) {
-        console.log('[*] Are you sure you want to overwrite the existing diary?');
-        const { proceed } = await inquirer.prompt([
+        (0, cli_1.info)(d, p.ASK_OVERWRITE);
+        const { proceed } = await inquirer_1.default.prompt([
             {
                 type: 'confirm',
                 name: 'proceed',
@@ -146,12 +145,10 @@ const import_diary_cli = async (d) => {
                 suffix: '',
             },
         ]);
-        if (proceed) {
+        if (proceed)
             await real_import_diary(d);
-        }
-        else {
-            console.log('[*] No diary was imported.');
-        }
+        else
+            (0, cli_1.success)(d, p.ABORTED);
     }
     else {
         await real_import_diary(d);
@@ -161,8 +158,8 @@ const sync_cli = async (d) => {
     if (!d.settings || !d.opened_diary)
         return default_cli(d);
     const prev = d.settings.sync;
-    console.log(`[*D] Google Drive sync is currently ${prev ? 'enabled' : 'disabled'}. Would you like to ${prev ? 'disable' : 'enable'} it?`);
-    const { status } = await inquirer.prompt([
+    (0, cli_1.info)(d, prev ? p.ASK_SYNC_ENABLE : p.ASK_SYNC_DISABLE);
+    const { status } = await inquirer_1.default.prompt([
         {
             type: 'confirm',
             name: 'status',
@@ -180,19 +177,22 @@ const sync_cli = async (d) => {
     catch (err) { }
     if (d.settings.sync && (!d.client || !(await (0, google_driver_1.check_scopes)(d.client)))) {
         d.settings.sync = false;
-        console.log('[!D] Failed to retrieve an access token. If this was not intentional, make sure you check all permissions needed by the app during the authorization process.');
+        if (!d.client)
+            (0, cli_1.err)(d, p.GAPI_ERR, 'Failed at authorize() in sync_cli.');
+        else
+            (0, cli_1.err)(d, p.GAPI_ERR, 'Failed at check_scopes() in sync_cli.');
     }
     if (prev !== d.settings.sync && d.client)
-        await fs_1.promises.writeFile(types_1.SETTINGS_PATH, JSON.stringify(d.settings));
+        await fs_2.promises.writeFile(types_1.SETTINGS_PATH, JSON.stringify(d.settings));
     if (d.settings.sync && !prev)
         d.changes_made = true;
-    console.log(`[*D] Google Drive sync has been ${d.settings.sync ? 'enabled' : 'disabled'}.`);
+    (0, cli_1.success)(d, d.settings.sync ? p.SYNC_ENABLED : p.SYNC_DISABLED);
 };
 const pwd_cli = async (d) => {
     if (!d.opened_diary)
         return default_cli(d);
-    console.log('[*D] Please enter a new password. Entering nothing will remove the password.');
-    const { pwd } = await inquirer.prompt([
+    (0, cli_1.info)(d, p.NEW_PWD);
+    const { pwd } = await inquirer_1.default.prompt([
         {
             type: 'password',
             message: '[>D]',
@@ -203,8 +203,8 @@ const pwd_cli = async (d) => {
         },
     ]);
     const first_time = pwd ? (0, encryptor_1.hash_key)(pwd) : null;
-    console.log('[*D] Please repeat the new password.');
-    const { pwd2 } = await inquirer.prompt([
+    (0, cli_1.info)(d, p.NEW_PWD_CONFIRM);
+    const { pwd2 } = await inquirer_1.default.prompt([
         {
             type: 'password',
             message: '[>D]',
@@ -217,24 +217,25 @@ const pwd_cli = async (d) => {
     const second_time = pwd2 ? (0, encryptor_1.hash_key)(pwd2) : null;
     if (first_time === second_time) {
         d.opened_diary.key = first_time;
-        console.log('[*D] The password has been updated.');
+        (0, cli_1.success)(d, p.NEW_PWD_SET);
         d.changes_made = true;
     }
     else {
-        console.log(`[!D] The two passwords did not match.`);
+        (0, cli_1.warn)(d, p.NEW_PWD_FAIL);
     }
 };
 const close_cli = async (d) => {
     if (!d.settings || !d.opened_diary)
         return default_cli(d);
-    let saved_to_drive = false;
+    let fail_save = false;
     try {
         await (0, file_system_1.save_diary)(d.opened_diary);
-        console.log('[*D] The diary has been saved locally.');
+        (0, cli_1.success)(d, p.LOCAL_SAVED);
         delete d.opened_diary;
     }
-    catch (err) {
-        console.log('[!D] The diary was unable to be saved locally. Error:', err);
+    catch (e) {
+        (0, cli_1.err)(d, p.LOCAL_SAVE_ERR, String(e));
+        fail_save = true;
     }
     try {
         if (!d.client && d.settings.sync)
@@ -243,30 +244,29 @@ const close_cli = async (d) => {
     catch (err) { }
     if (d.settings.sync && d.client) {
         if (!(await (0, google_driver_1.check_scopes)(d.client))) {
-            console.log('[!D] Failed to retrieve an access token. If this was not intentional, make sure you check all permissions needed by the app during the authorization process.');
+            (0, cli_1.err)(d, p.GAPI_ERR, 'Failed at check_scopes() in close_cli.');
         }
         else {
             try {
                 await (0, google_driver_1.upload_diary)(d.client, d.settings);
-                console.log('[*D] The diary has been succesfully backed up on Google Drive.');
+                (0, cli_1.success)(d, p.UPLOAD_SUCCESS);
             }
-            catch (err) {
-                console.log('[!D] Failed to upload diary to Google Drive. Error:', err);
-                d.changes_made = false;
-                saved_to_drive = true;
+            catch (e) {
+                fail_save = true;
+                (0, cli_1.err)(d, p.UPLOAD_FAIL, String(e));
             }
         }
     }
     else if (d.settings.sync) {
-        console.log('[!D] Failed to retrieve an access token. If this was not intentional, make sure you check all permissions needed by the app during the authorization process.');
+        (0, cli_1.err)(d, p.GAPI_ERR, 'Failed at authorize() in close_cli.');
     }
-    if (!d.settings.sync && !saved_to_drive)
+    if (!fail_save)
         d.changes_made = false;
 };
 const quit_cli = async (d) => {
     if (d.changes_made && d.opened_diary) {
-        console.log(d.opened_diary ? `[>D]` : '[>]', 'You have unsaved changes. To save them, type `no`, then `close`. Are you sure you want to quit?');
-        const { status } = await inquirer.prompt([
+        (0, cli_1.warn)(d, p.UNSAVED_CHANGES);
+        const { status } = await inquirer_1.default.prompt([
             {
                 type: 'confirm',
                 name: 'status',
@@ -277,28 +277,60 @@ const quit_cli = async (d) => {
             },
         ]);
         if (!status) {
-            console.log('[*D] Aborted qutting.');
+            (0, cli_1.success)(d, p.ABORTED);
         }
         else {
-            console.log('[*D] Qutting...');
+            (0, cli_1.info)(d, p.QUIT);
             process.exit(0);
         }
     }
     else {
-        console.log('[*] Qutting...');
+        (0, cli_1.info)(d, p.QUIT);
         process.exit(0);
     }
 };
-const loop = async (d) => {
+const flush_cli = async (d) => {
+    if (d.opened_diary)
+        return default_cli(d);
     try {
-        const { cmd } = await inquirer.prompt([
-            {
-                name: 'cmd',
-                message: d.opened_diary ? '[>D]' : '[>]',
-                prefix: '',
-                suffix: '',
-            },
-        ]);
+        await fs_2.promises.unlink(types_1.TOKEN_PATH);
+    }
+    catch (err) { }
+    (0, cli_1.info)(d, p.CREDENTIALS_DELETED);
+};
+const dump_cli = async (d) => {
+    if (d.opened_diary)
+        return default_cli(d);
+    if (!d.client)
+        return (0, cli_1.warn)(d, p.MISSING_OAUTH2);
+    if (!(await (0, google_driver_1.check_scopes)(d.client))) {
+        (0, cli_1.err)(d, p.GAPI_ERR, 'Failed at check_scopes() in close_cli.');
+    }
+    else {
+        try {
+            await fs_2.promises.mkdir(types_1.DUMP_PATH);
+        }
+        catch (err) { }
+        try {
+            (0, cli_1.info)(d, p.START_DUMP);
+            await (0, google_driver_1.dump_drive_files)(d.client, types_1.DUMP_PATH);
+            (0, cli_1.success)(d, p.DUMP_SUCCESS);
+        }
+        catch (e) {
+            (0, cli_1.err)(d, p.DUMP_FAIL, String(e));
+        }
+    }
+};
+const loop = async (d) => {
+    const { cmd } = await inquirer_1.default.prompt([
+        {
+            name: 'cmd',
+            message: d.opened_diary ? '[>D]' : '[>]',
+            prefix: '',
+            suffix: '',
+        },
+    ]);
+    try {
         switch (cmd) {
             case 'help':
                 help_cli(d);
@@ -321,6 +353,12 @@ const loop = async (d) => {
             case 'close':
                 await close_cli(d);
                 break;
+            case 'flush':
+                await flush_cli(d);
+                break;
+            case 'dump':
+                await dump_cli(d);
+                break;
             case 'debug':
                 console.log('[DEBUG]', d.settings);
                 console.log('[DEBUG]', d.opened_diary);
@@ -335,25 +373,24 @@ const loop = async (d) => {
                 break;
         }
     }
-    catch (err) {
-        if (!d.opened_diary)
-            console.log(`[!] Error`, err);
-        else
-            console.log(`[!D] Error`, err);
+    catch (e) {
+        (0, cli_1.err)(d, 'Failed at try, switch in loop.', String(e));
     }
     loop(d);
 };
 const main = async () => {
-    console.log(`[*] Welcome to the CLI for online-diary (v${process.env.npm_package_version})`);
-    console.log('[*] Type `help` to see all available commands.');
-    console.log('[*] If this is your first time on another device, type `import` first to sync your diary!');
+    try {
+        await fs_2.promises.mkdir(types_1.DATA_PATH);
+    }
+    catch (err) { }
     const d = { changes_made: false };
     d.settings = await (0, file_system_1.get_settings)();
+    (0, cli_1.info)(d, p.WELCOME);
     try {
         loop(d);
     }
     catch (err) {
-        console.log('[!!!] It seems a fatal error has occurred. The program will shut down immediately.');
+        (0, cli_1.critical)(d, p.FATAL_ERR, String(err));
         process.exit(1);
     }
 };
