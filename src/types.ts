@@ -1,6 +1,6 @@
 import { OAuth2Client } from 'google-auth-library';
 
-export const VERSION = '0.0.3';
+export const VERSION = '0.0.4';
 
 export const DATA_PATH = './data';
 
@@ -46,6 +46,16 @@ export enum Month {
 	October = 10,
 	November = 11,
 	December = 12,
+}
+
+export enum Day {
+	Sunday = 0,
+	Monday = 1,
+	Tuesday = 2,
+	Wednesday = 3,
+	Thursday = 4,
+	Friday = 5,
+	Saturday = 6,
 }
 
 export interface DailyEntry {

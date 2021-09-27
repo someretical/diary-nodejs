@@ -17,21 +17,19 @@ import {
 import { GaxiosResponse } from 'gaxios';
 import { OAuth2Client } from 'google-auth-library';
 import clipboardy from 'clipboardy';
-import fs, { write } from 'fs';
-import inquirer from 'inquirer';
-import path from 'path';
-import stream from 'stream';
-
 /**
  * client_secret.json is not actually secret in this case
  * See https://developers.google.com/identity/protocols/oauth2
  */
 import credentials from './client_secret.json';
-
+import fs from 'fs';
 import { promises as fsp } from 'fs';
 import { google } from 'googleapis';
 import { info } from './cli';
+import inquirer from 'inquirer';
+import path from 'path';
 import { promisify } from 'util';
+import stream from 'stream';
 
 const _pipe = promisify(stream.pipeline);
 

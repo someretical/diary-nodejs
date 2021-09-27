@@ -3,13 +3,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AUTH_CONFIRM = exports.ENTER_PWD = exports.WRONG_PWD = exports.LOCAL_DIARY_NOT_FOUND = exports.LOCAL_DIARY_FOUND = exports.DUMP_FAIL = exports.DUMP_SUCCESS = exports.START_DUMP = exports.MISSING_OAUTH2 = exports.CREDENTIALS_DELETED = exports.WELCOME = exports.FATAL_ERR = exports.QUIT = exports.UNSAVED_CHANGES = exports.UPLOAD_FAIL = exports.UPLOAD_SUCCESS = exports.LOCAL_SAVE_ERR = exports.LOCAL_SAVED = exports.NEW_PWD_SET = exports.NEW_PWD_FAIL = exports.NEW_PWD_CONFIRM = exports.NEW_PWD = exports.SYNC_DISABLED = exports.SYNC_ENABLED = exports.ASK_SYNC_DISABLE = exports.ASK_SYNC_ENABLE = exports.DOWNLOAD_SUCCESS = exports.DOWNLOAD_FAIL = exports.GAPI_ERR = exports.ASK_OVERWRITE = exports.ABORTED = exports.OPENED_DIARY = exports.HELP_DIARY_OPEN = exports.HELP_DIARY_CLOSED = exports.DIARY_CREATE = exports.UNKNOWN_CMD = void 0;
+exports.ENTER_PWD = exports.WRONG_PWD = exports.LOCAL_DIARY_NOT_FOUND = exports.LOCAL_DIARY_FOUND = exports.LIST_INFO = exports.ENTRY_ADDED = exports.ENTRY_EXISTS = exports.NO = exports.YES = exports.CONFIRM_ENTRY = exports.PROMPT_IS_SPECIAL = exports.INVALID_MESSAGE = exports.PROMPT_MESSAGE = exports.INVALID_RATING = exports.PROMPT_RATING = exports.NOW_EDITING = exports.INVALID_DATE = exports.MONTH_PROMPT = exports.DATE_PROMPT = exports.DUMP_FAIL = exports.DUMP_SUCCESS = exports.START_DUMP = exports.MISSING_OAUTH2 = exports.CREDENTIALS_DELETED = exports.WELCOME = exports.FATAL_ERR = exports.QUIT = exports.UNSAVED_CHANGES = exports.UPLOAD_FAIL = exports.UPLOAD_SUCCESS = exports.LOCAL_SAVE_ERR = exports.LOCAL_SAVED = exports.NEW_PWD_SET = exports.NEW_PWD_FAIL = exports.NEW_PWD_CONFIRM = exports.NEW_PWD = exports.SYNC_DISABLED = exports.SYNC_ENABLED = exports.ASK_SYNC_DISABLE = exports.ASK_SYNC_ENABLE = exports.DOWNLOAD_SUCCESS = exports.DOWNLOAD_FAIL = exports.GAPI_ERR = exports.ASK_OVERWRITE = exports.ABORTED = exports.OPENED_DIARY = exports.HELP_DIARY_OPEN = exports.HELP_DIARY_CLOSED = exports.DIARY_CREATE = exports.UNKNOWN_CMD = void 0;
+exports.AUTH_CONFIRM = void 0;
 const types_1 = require("./types");
 const chalk_1 = __importDefault(require("chalk"));
 exports.UNKNOWN_CMD = `Unknown command. Type {help} to view all available commands in the current context.`;
 exports.DIARY_CREATE = `A new diary was created. Type {help} to see new commands.`;
 exports.HELP_DIARY_CLOSED = 'Commands: {dump} {flush} {help} {import} {new} {open} {quit}';
-exports.HELP_DIARY_OPEN = 'Commands: {close} {help} {pwd} {quit} {sync}';
+exports.HELP_DIARY_OPEN = 'Commands: {add} {close} {help} {list} {pwd} {quit} {sync} {view}';
 exports.OPENED_DIARY = 'Diary opened. Type {help} to see new commands.';
 exports.ABORTED = 'Aborted.';
 exports.ASK_OVERWRITE = `Are you sure you want to ${chalk_1.default.bold('overwrite')} the existing diary?`;
@@ -40,7 +41,38 @@ exports.CREDENTIALS_DELETED = 'The Google OAuth2 access token was deleted.';
 exports.MISSING_OAUTH2 = 'This command requires access to your Google Drive.';
 exports.START_DUMP = 'Started downloading all diary files from Google Drive...';
 exports.DUMP_SUCCESS = `Finished downloading all diary files from Google Drive to ${types_1.DUMP_PATH}`;
-exports.DUMP_FAIL = 'Failed to download all diary files from Google Drive. ';
+exports.DUMP_FAIL = 'Failed to download all diary files from Google Drive.';
+exports.DATE_PROMPT = [
+    `Please type a valid date in ${chalk_1.default.bold('YYYY MM DD')} format.`,
+    `If ${chalk_1.default.bold('YYYY')} is excluded, it will be assumed from the system clock.`,
+    `If ${chalk_1.default.bold('YYYY MM')} are excluded, they will be assumed from the system clock.`,
+    `To completely assume the current time, enter nothing.`,
+    `To abort this command, type {cancel}.`,
+];
+exports.MONTH_PROMPT = [
+    `Please type a valid date in ${chalk_1.default.bold('YYYY MM')} format.`,
+    `If ${chalk_1.default.bold('YYYY')} is excluded, it will be assumed from the system clock.`,
+    `To completely assume the current time, enter nothing.`,
+    `To abort this command, type {cancel}.`,
+];
+exports.INVALID_DATE = 'The app was unable to parse the date you provided.';
+exports.NOW_EDITING = 'Now editing ';
+exports.PROMPT_RATING = 'Please rate this day on the scale of 1-5';
+exports.INVALID_RATING = 'Invalid rating.';
+exports.PROMPT_MESSAGE = 'Please provide a message for this day. You can enter nothing to skip this step.';
+exports.INVALID_MESSAGE = 'The message has a maximum length of 1000 characters.';
+exports.PROMPT_IS_SPECIAL = 'Do you want to make this day as important?';
+exports.CONFIRM_ENTRY = [
+    `Please ${chalk_1.default.bold `confirm`} the following details:`,
+    `${chalk_1.default.bold `Rating:`}    `,
+    `${chalk_1.default.bold `Message:`}   `,
+    `${chalk_1.default.bold `Important?`} `,
+];
+exports.YES = 'yes';
+exports.NO = 'no';
+exports.ENTRY_EXISTS = 'An entry for this date already exists. Type {edit} to modify an existing entry.';
+exports.ENTRY_ADDED = 'The entry has been added to the diary.';
+exports.LIST_INFO = 'Listing all entries for ';
 exports.LOCAL_DIARY_FOUND = 'Local diary found. Opening...';
 exports.LOCAL_DIARY_NOT_FOUND = 'No existing diary was found. A new one will be created.';
 exports.WRONG_PWD = 'Wrong password. To overwrite the local diary, abort this command and type {new}';

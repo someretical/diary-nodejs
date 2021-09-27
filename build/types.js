@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Month = exports.Rating = exports.SCOPES = exports.FILE_VERSION = exports.DUMP_PATH = exports.BACKUP_PATH = exports.DIARY_PATH = exports.BACKUP_NAME = exports.DIARY_NAME = exports.TOKEN_PATH = exports.SETTINGS_PATH = exports.DATA_PATH = exports.VERSION = void 0;
-exports.VERSION = '0.0.3';
+exports.Day = exports.Month = exports.Rating = exports.SCOPES = exports.FILE_VERSION = exports.DUMP_PATH = exports.BACKUP_PATH = exports.DIARY_PATH = exports.BACKUP_NAME = exports.DIARY_NAME = exports.TOKEN_PATH = exports.SETTINGS_PATH = exports.DATA_PATH = exports.VERSION = void 0;
+exports.VERSION = '0.0.4';
 exports.DATA_PATH = './data';
 exports.SETTINGS_PATH = `${exports.DATA_PATH}/settings.json`;
 exports.TOKEN_PATH = `${exports.DATA_PATH}/credentials.json`;
@@ -38,3 +38,13 @@ var Month;
     Month[Month["November"] = 11] = "November";
     Month[Month["December"] = 12] = "December";
 })(Month = exports.Month || (exports.Month = {}));
+var Day;
+(function (Day) {
+    Day[Day["Sunday"] = 0] = "Sunday";
+    Day[Day["Monday"] = 1] = "Monday";
+    Day[Day["Tuesday"] = 2] = "Tuesday";
+    Day[Day["Wednesday"] = 3] = "Wednesday";
+    Day[Day["Thursday"] = 4] = "Thursday";
+    Day[Day["Friday"] = 5] = "Friday";
+    Day[Day["Saturday"] = 6] = "Saturday";
+})(Day = exports.Day || (exports.Day = {}));

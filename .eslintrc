@@ -15,6 +15,6 @@
 	"ignorePatterns": ["*.js"],
 	"rules": {
 		"prettier/prettier": 2,
-		"sort-imports": 1
+		"sort-imports": 2
 	}
 }

@@ -11,7 +11,8 @@ export const DIARY_CREATE = `A new diary was created. Type {help} to see new com
 export const HELP_DIARY_CLOSED =
 	'Commands: {dump} {flush} {help} {import} {new} {open} {quit}';
 
-export const HELP_DIARY_OPEN = 'Commands: {close} {help} {pwd} {quit} {sync}';
+export const HELP_DIARY_OPEN =
+	'Commands: {add} {close} {help} {list} {pwd} {quit} {sync} {view}';
 
 export const OPENED_DIARY = 'Diary opened. Type {help} to see new commands.';
 
@@ -95,7 +96,63 @@ export const START_DUMP =
 export const DUMP_SUCCESS = `Finished downloading all diary files from Google Drive to ${DUMP_PATH}`;
 
 export const DUMP_FAIL =
-	'Failed to download all diary files from Google Drive. ';
+	'Failed to download all diary files from Google Drive.';
+
+export const DATE_PROMPT = [
+	`Please type a valid date in ${chalk.bold('YYYY MM DD')} format.`,
+	`If ${chalk.bold(
+		'YYYY'
+	)} is excluded, it will be assumed from the system clock.`,
+	`If ${chalk.bold(
+		'YYYY MM'
+	)} are excluded, they will be assumed from the system clock.`,
+	`To completely assume the current time, enter nothing.`,
+	`To abort this command, type {cancel}.`,
+];
+
+export const MONTH_PROMPT = [
+	`Please type a valid date in ${chalk.bold('YYYY MM')} format.`,
+	`If ${chalk.bold(
+		'YYYY'
+	)} is excluded, it will be assumed from the system clock.`,
+	`To completely assume the current time, enter nothing.`,
+	`To abort this command, type {cancel}.`,
+];
+
+export const INVALID_DATE =
+	'The app was unable to parse the date you provided.';
+
+export const NOW_EDITING = 'Now editing ';
+
+export const PROMPT_RATING = 'Please rate this day on the scale of 1-5';
+
+export const INVALID_RATING = 'Invalid rating.';
+
+export const PROMPT_MESSAGE =
+	'Please provide a message for this day. You can enter nothing to skip this step.';
+
+export const INVALID_MESSAGE =
+	'The message has a maximum length of 1000 characters.';
+
+export const PROMPT_IS_SPECIAL = 'Do you want to make this day as important?';
+
+export const CONFIRM_ENTRY = [
+	`Please ${chalk.bold`confirm`} the following details:`,
+	`${chalk.bold`Rating:`}    `,
+	`${chalk.bold`Message:`}   `,
+	`${chalk.bold`Important?`} `,
+];
+
+export const YES = 'yes';
+
+export const NO = 'no';
+
+export const ENTRY_EXISTS =
+	'An entry for this date already exists. Type {edit} to modify an existing entry.';
+
+export const ENTRY_ADDED = 'The entry has been added to the diary.';
+
+export const LIST_INFO = 'Listing all entries for ';
 
 /**
  * file_system.ts

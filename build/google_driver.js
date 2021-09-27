@@ -26,15 +26,15 @@ exports.dump_drive_files = exports.wipe_drive_files = exports.upload_diary = exp
 const p = __importStar(require("./prompts"));
 const types_1 = require("./types");
 const clipboardy_1 = __importDefault(require("clipboardy"));
-const fs_1 = __importDefault(require("fs"));
-const inquirer_1 = __importDefault(require("inquirer"));
-const path_1 = __importDefault(require("path"));
-const stream_1 = __importDefault(require("stream"));
 const client_secret_json_1 = __importDefault(require("./client_secret.json"));
+const fs_1 = __importDefault(require("fs"));
 const fs_2 = require("fs");
 const googleapis_1 = require("googleapis");
 const cli_1 = require("./cli");
+const inquirer_1 = __importDefault(require("inquirer"));
+const path_1 = __importDefault(require("path"));
 const util_1 = require("util");
+const stream_1 = __importDefault(require("stream"));
 const _pipe = (0, util_1.promisify)(stream_1.default.pipeline);
 const check_scopes = async (oauth2client, cmp_scopes = types_1.SCOPES) => {
     const { token } = await oauth2client.getAccessToken();
