@@ -1,6 +1,6 @@
 import { OAuth2Client } from 'google-auth-library';
 
-export const VERSION = '0.0.4';
+export const VERSION = '1.0.0';
 
 export const DATA_PATH = './data';
 
@@ -15,6 +15,10 @@ export const BACKUP_NAME = 'diary.dat.bak';
 export const DIARY_PATH = `${DATA_PATH}/${DIARY_NAME}`;
 
 export const BACKUP_PATH = `${DATA_PATH}/${BACKUP_NAME}`;
+
+export const IMPORT_PATH = `${DATA_PATH}/import`;
+
+export const EXPORT_PATH = `${DATA_PATH}/export`;
 
 export const DUMP_PATH = `${DATA_PATH}/dump`;
 

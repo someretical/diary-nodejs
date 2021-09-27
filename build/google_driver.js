@@ -26,7 +26,7 @@ exports.dump_drive_files = exports.wipe_drive_files = exports.upload_diary = exp
 const p = __importStar(require("./prompts"));
 const types_1 = require("./types");
 const clipboardy_1 = __importDefault(require("clipboardy"));
-const client_secret_json_1 = __importDefault(require("./client_secret.json"));
+const details_json_1 = __importDefault(require("./details.json"));
 const fs_1 = __importDefault(require("fs"));
 const fs_2 = require("fs");
 const googleapis_1 = require("googleapis");
@@ -45,7 +45,7 @@ const check_scopes = async (oauth2client, cmp_scopes = types_1.SCOPES) => {
 };
 exports.check_scopes = check_scopes;
 const authorize = async () => {
-    const { client_secret, client_id, redirect_uris } = client_secret_json_1.default.installed;
+    const { client_secret, client_id, redirect_uris } = details_json_1.default.installed;
     const oauth2client = new googleapis_1.google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
     try {
         const data = await fs_2.promises.readFile(types_1.TOKEN_PATH);

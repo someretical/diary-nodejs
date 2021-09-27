@@ -1,18 +1,20 @@
-import { DUMP_PATH, VERSION } from './types';
+import { DIARY_NAME, DUMP_PATH, EXPORT_PATH, VERSION } from './types';
 import chalk from 'chalk';
 
 /**
  * index.ts
  */
-export const UNKNOWN_CMD = `Unknown command. Type {help} to view all available commands in the current context.`;
+export const UNKNOWN_CMD =
+	'Unknown command. Type {help} to view all available commands in the current context.';
 
-export const DIARY_CREATE = `A new diary was created. Type {help} to see new commands.`;
+export const DIARY_CREATE =
+	'A new diary was created. Type {help} to see new commands.';
 
 export const HELP_DIARY_CLOSED =
-	'Commands: {dump} {flush} {help} {import} {new} {open} {quit}';
+	'Commands: {download} {dump} {flush} {help} {import} {new} {open} {quit}';
 
 export const HELP_DIARY_OPEN =
-	'Commands: {add} {close} {help} {list} {pwd} {quit} {sync} {view}';
+	'Commands: {add} {close} {del} {edit} {export} {help} {list} {pwd} {quit} {sync} {view}';
 
 export const OPENED_DIARY = 'Diary opened. Type {help} to see new commands.';
 
@@ -81,7 +83,7 @@ export const FATAL_ERR = `It seems a ${chalk.bold(
 export const WELCOME = [
 	`Welcome to the CLI for ${chalk.blue('online-diary')} (v${VERSION})`,
 	'Type {help} to see all available commands.',
-	'If this is your first time on another device, type {import} first to sync your diary.',
+	'If this is your first time on another device, type {download} first to sync your diary.',
 ];
 
 export const CREDENTIALS_DELETED =
@@ -124,7 +126,7 @@ export const INVALID_DATE =
 
 export const NOW_EDITING = 'Now editing ';
 
-export const PROMPT_RATING = 'Please rate this day on the scale of 1-5';
+export const PROMPT_RATING = 'Please rate this day on the scale of 1-5.';
 
 export const INVALID_RATING = 'Invalid rating.';
 
@@ -153,6 +155,23 @@ export const ENTRY_EXISTS =
 export const ENTRY_ADDED = 'The entry has been added to the diary.';
 
 export const LIST_INFO = 'Listing all entries for ';
+
+export const EXPORT_SUCCESS = 'The diary has been exported to ';
+
+export const EXPORT_FAIL = 'Failed to export the diary.';
+
+export const IMPORT_SUCCESS =
+	'The diary has been successfully imported. Type {help} to see new commands.';
+
+export const IMPORT_FAIL = `Failed to import the diary. Make sure there is a file named ${DIARY_NAME}.json in ${EXPORT_PATH}`;
+
+export const UNKNOWN_ENTRY = 'No entry for this date exists.';
+
+export const ASK_DELETE = 'Are you sure you want to delete this entry?';
+
+export const ENTRY_DELETED = 'The entry was deleted.';
+
+export const ORIGINAL = 'Original:';
 
 /**
  * file_system.ts

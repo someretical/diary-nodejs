@@ -2,12 +2,15 @@
 import * as p from './prompts';
 import {
 	DATA_PATH,
+	DIARY_NAME,
 	DIARY_PATH,
 	DUMP_PATH,
 	DailyEntry,
 	DataContainer,
 	Day,
+	EXPORT_PATH,
 	FILE_VERSION,
+	IMPORT_PATH,
 	Month,
 	OpenDiary,
 	SETTINGS_PATH,
@@ -33,6 +36,17 @@ const zero_pad = (num: number, places: number) => {
 	while (str.length < places) str = '0' + str;
 	return str;
 };
+
+const colour_rating = (rating: number, text: string) =>
+	rating === 1
+		? chalk.bgRedBright(text)
+		: rating === 2
+		? chalk.bgYellowBright.black(text)
+		: rating === 3
+		? chalk.inverse(text)
+		: rating === 4
+		? chalk.bgCyanBright.black(text)
+		: chalk.bgGreenBright(text);
 
 const default_cli = (d: DataContainer) => warn(d, p.UNKNOWN_CMD);
 
@@ -127,7 +141,7 @@ const real_import_diary = async (d: DataContainer) => {
 	}
 };
 
-const import_diary_cli = async (d: DataContainer) => {
+const download_diary_cli = async (d: DataContainer) => {
 	if (d.opened_diary) return default_cli(d);
 
 	let exists;
@@ -446,7 +460,7 @@ const confirm_entry_prompt = async (
 ): Promise<boolean> => {
 	info(d, [
 		p.CONFIRM_ENTRY[0],
-		p.CONFIRM_ENTRY[1] + rating.toString(),
+		p.CONFIRM_ENTRY[1] + colour_rating(rating, rating.toString()),
 		p.CONFIRM_ENTRY[2] + (msg || 'None'),
 		p.CONFIRM_ENTRY[3] + (special ? p.YES : p.NO),
 	]);
@@ -456,7 +470,7 @@ const confirm_entry_prompt = async (
 			type: 'confirm',
 			name: 'status',
 			message: '[>D]',
-			default: false,
+			default: true,
 			prefix: '',
 			suffix: '',
 		},
@@ -465,7 +479,10 @@ const confirm_entry_prompt = async (
 	return status;
 };
 
-const check_entry_exists = (d: DataContainer, date: number[]): boolean => {
+const check_entry_exists = (
+	d: DataContainer,
+	date: number[]
+): false | number[] => {
 	if (!d.opened_diary) return false;
 
 	const y_index = d.opened_diary.diary.years.findIndex(y => y.year === date[0]);
@@ -481,7 +498,7 @@ const check_entry_exists = (d: DataContainer, date: number[]): boolean => {
 	].days.findIndex(d => d.day === date[2]);
 	if (d_index === -1) return false;
 
-	return true;
+	return [y_index, m_index, d_index];
 };
 
 const save_entry = (
@@ -580,10 +597,113 @@ const add_cli = async (d: DataContainer) => {
 
 const del_cli = async (d: DataContainer) => {
 	if (!d.opened_diary) return default_cli(d);
+	const date = [0, 0, 0];
+
+	info(d, p.DATE_PROMPT);
+	try {
+		const [y, m, _d] = await get_date_prompt();
+
+		if (y === -1 && m === -1 && _d === -1) return success(d, p.ABORTED);
+
+		date[0] = y;
+		date[1] = m;
+		date[2] = _d;
+	} catch (err) {
+		return warn(d, p.INVALID_DATE);
+	}
+
+	const status = check_entry_exists(d, date);
+
+	if (status === false) return warn(d, p.UNKNOWN_ENTRY);
+
+	const date_obj = new Date(date[0], date[1] - 1, date[2]);
+	const fmt_day = chalk.bold`${
+		Day[date_obj.getDay()]
+	} ${date_obj.getFullYear()}/${zero_pad(
+		date_obj.getMonth() + 1,
+		2
+	)}/${zero_pad(date_obj.getDate(), 2)}`;
+
+	info(d, `${p.ASK_DELETE} (${chalk.bold(fmt_day)})`);
+	const { proceed } = await inquirer.prompt([
+		{
+			type: 'confirm',
+			name: 'proceed',
+			message: '[>]',
+			default: false,
+			prefix: '',
+			suffix: '',
+		},
+	]);
+
+	if (proceed) {
+		d.opened_diary.diary.years[status[0]].months[status[1]].days.splice(
+			status[2],
+			1
+		);
+
+		success(d, `${p.ENTRY_DELETED} (${chalk.bold(fmt_day)})`);
+		d.changes_made = true;
+	} else {
+		success(d, p.ABORTED);
+	}
 };
 
 const edit_cli = async (d: DataContainer) => {
 	if (!d.opened_diary) return default_cli(d);
+	const date = [0, 0, 0];
+
+	info(d, p.DATE_PROMPT);
+	try {
+		const [y, m, _d] = await get_date_prompt();
+
+		if (y === -1 && m === -1 && _d === -1) return success(d, p.ABORTED);
+
+		date[0] = y;
+		date[1] = m;
+		date[2] = _d;
+	} catch (err) {
+		return warn(d, p.INVALID_DATE);
+	}
+
+	const status = check_entry_exists(d, date);
+	if (status === false) return warn(d, p.UNKNOWN_ENTRY);
+
+	const before =
+		d.opened_diary.diary.years[status[0]].months[status[1]].days[status[2]];
+	const _date = new Date(date[0], date[1] - 1, date[2]);
+	const header_text = chalk.bold`${
+		Day[_date.getDay()]
+	} ${_date.getFullYear()}/${zero_pad(_date.getMonth() + 1, 2)}/${zero_pad(
+		_date.getDate(),
+		2
+	)}`;
+
+	info(d, p.NOW_EDITING + header_text);
+
+	info(d, p.PROMPT_RATING);
+	info(
+		d,
+		`${p.ORIGINAL} ${colour_rating(before.rating, before.rating.toString())}`
+	);
+	const rating = await get_rating_prompt();
+
+	info(d, p.PROMPT_MESSAGE);
+	info(d, p.ORIGINAL);
+	if (before.description) {
+		info(d, before.description.split('\n'));
+	} else {
+		info(d, 'None');
+	}
+	const message = await get_message_prompt();
+
+	info(d, p.PROMPT_IS_SPECIAL);
+	info(d, `${p.ORIGINAL} ${before.is_important ? p.YES : p.NO}`);
+	const is_special = await get_special_prompt();
+
+	if (await confirm_entry_prompt(d, rating, message, is_special))
+		save_entry(d, date, rating, message, is_special);
+	else success(d, p.ABORTED);
 };
 
 const get_month_prompt = async (): Promise<number[]> => {
@@ -702,17 +822,7 @@ const view_cli = async (d: DataContainer) => {
 			const special = day.is_important ? '+' : ' ';
 			const text = ` ${special}${zero_pad(i + 1, 2)} `;
 
-			display_calender[current_row].push(
-				day.rating === 1
-					? chalk.bgRedBright(text)
-					: day.rating === 2
-					? chalk.bgYellowBright.black(text)
-					: day.rating === 3
-					? chalk.inverse(text)
-					: day.rating === 4
-					? chalk.bgCyanBright.black(text)
-					: chalk.bgGreenBright(text)
-			);
+			display_calender[current_row].push(colour_rating(day.rating, text));
 		}
 	}
 
@@ -782,18 +892,14 @@ const list_cli = async (d: DataContainer) => {
 			_.day,
 			2
 		)}`;
-		const fmt_rating =
-			_.rating === 1
-				? chalk.bgRedBright('1')
-				: _.rating === 2
-				? chalk.bgYellowBright.black('2')
-				: _.rating === 3
-				? chalk.inverse('3')
-				: _.rating === 4
-				? chalk.bgCyanBright.black('4')
-				: chalk.bgGreenBright('5');
 
-		info(d, `┃ ${fmt_day}${' '.repeat(30 - fmt_day.length)}(${fmt_rating}/5)`);
+		info(
+			d,
+			`┃ ${fmt_day}${' '.repeat(30 - fmt_day.length)}(${colour_rating(
+				_.rating,
+				_.rating.toString()
+			)}/5)`
+		);
 
 		if (_.description) {
 			info(d, `┠─Notes${'─'.repeat(process.stdout.columns - 12)}`);
@@ -810,6 +916,71 @@ const list_cli = async (d: DataContainer) => {
 			)}`
 		);
 	});
+};
+
+const export_cli = async (d: DataContainer) => {
+	if (!d.opened_diary) return default_cli(d);
+
+	try {
+		await fsp.mkdir(EXPORT_PATH);
+		// eslint-disable-next-line no-empty
+	} catch (err) {}
+
+	try {
+		const file_path = `${EXPORT_PATH}/${DIARY_NAME}.json`;
+		await fsp.writeFile(file_path, JSON.stringify(d.opened_diary.diary));
+
+		info(d, p.EXPORT_SUCCESS + file_path);
+	} catch (e) {
+		err(d, p.EXPORT_FAIL, String(e));
+	}
+};
+
+const real_import_json_diary = async (d: DataContainer) => {
+	try {
+		const file_contents = await fsp.readFile(IMPORT_PATH);
+
+		d.opened_diary = {
+			diary: JSON.parse(file_contents.toString('utf8')),
+			key: null,
+		};
+
+		success(d, p.IMPORT_SUCCESS);
+		d.changes_made = true;
+	} catch (e) {
+		err(d, p.IMPORT_FAIL, String(e));
+	}
+};
+
+const import_cli = async (d: DataContainer) => {
+	if (!d.opened_diary) return default_cli(d);
+
+	let exists;
+	try {
+		await fsp.access(DIARY_PATH, fs.constants.F_OK);
+		exists = true;
+	} catch (err) {
+		exists = false;
+	}
+
+	if (exists) {
+		info(d, p.ASK_OVERWRITE);
+		const { proceed } = await inquirer.prompt([
+			{
+				type: 'confirm',
+				name: 'proceed',
+				message: '[>]',
+				default: false,
+				prefix: '',
+				suffix: '',
+			},
+		]);
+
+		if (proceed) await real_import_json_diary(d);
+		else success(d, p.ABORTED);
+	} else {
+		await real_import_json_diary(d);
+	}
 };
 
 const loop = async (d: DataContainer): Promise<void> => {
@@ -833,8 +1004,8 @@ const loop = async (d: DataContainer): Promise<void> => {
 			case 'new':
 				await new_diary_cli(d);
 				break;
-			case 'import':
-				await import_diary_cli(d);
+			case 'download':
+				await download_diary_cli(d);
 				break;
 			case 'sync':
 				await sync_cli(d);
@@ -866,18 +1037,24 @@ const loop = async (d: DataContainer): Promise<void> => {
 			case 'list':
 				await list_cli(d);
 				break;
+			case 'export':
+				await export_cli(d);
+				break;
+			case 'import':
+				await import_cli(d);
+				break;
 			case 'quit':
 				await quit_cli(d);
 				break;
-			case 'debug':
-				console.log('[DEBUG]', d.settings);
-				console.log('[DEBUG]', d.opened_diary);
-				console.log(
-					'[DEBUG]',
-					d.client ? 'oauth2client exists' : 'oauth2client does not exist'
-				);
-				console.log('[DEBUG] changes_made', d.changes_made);
-				break;
+			// case 'debug':
+			// 	console.log('[DEBUG]', d.settings);
+			// 	console.log('[DEBUG]', d.opened_diary);
+			// 	console.log(
+			// 		'[DEBUG]',
+			// 		d.client ? 'oauth2client exists' : 'oauth2client does not exist'
+			// 	);
+			// 	console.log('[DEBUG] changes_made', d.changes_made);
+			// 	break;
 			default:
 				default_cli(d);
 				break;

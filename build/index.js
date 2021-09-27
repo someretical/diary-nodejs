@@ -38,6 +38,15 @@ const zero_pad = (num, places) => {
         str = '0' + str;
     return str;
 };
+const colour_rating = (rating, text) => rating === 1
+    ? chalk_1.default.bgRedBright(text)
+    : rating === 2
+        ? chalk_1.default.bgYellowBright.black(text)
+        : rating === 3
+            ? chalk_1.default.inverse(text)
+            : rating === 4
+                ? chalk_1.default.bgCyanBright.black(text)
+                : chalk_1.default.bgGreenBright(text);
 const default_cli = (d) => (0, cli_1.warn)(d, p.UNKNOWN_CMD);
 const make_new_diary = (d) => {
     d.changes_made = true;
@@ -129,7 +138,7 @@ const real_import_diary = async (d) => {
         }
     }
 };
-const import_diary_cli = async (d) => {
+const download_diary_cli = async (d) => {
     if (d.opened_diary)
         return default_cli(d);
     let exists;
@@ -418,7 +427,7 @@ const get_special_prompt = async () => {
 const confirm_entry_prompt = async (d, rating, msg, special) => {
     (0, cli_1.info)(d, [
         p.CONFIRM_ENTRY[0],
-        p.CONFIRM_ENTRY[1] + rating.toString(),
+        p.CONFIRM_ENTRY[1] + colour_rating(rating, rating.toString()),
         p.CONFIRM_ENTRY[2] + (msg || 'None'),
         p.CONFIRM_ENTRY[3] + (special ? p.YES : p.NO),
     ]);
@@ -427,7 +436,7 @@ const confirm_entry_prompt = async (d, rating, msg, special) => {
             type: 'confirm',
             name: 'status',
             message: '[>D]',
-            default: false,
+            default: true,
             prefix: '',
             suffix: '',
         },
@@ -446,7 +455,7 @@ const check_entry_exists = (d, date) => {
     const d_index = d.opened_diary.diary.years[y_index].months[m_index].days.findIndex(d => d.day === date[2]);
     if (d_index === -1)
         return false;
-    return true;
+    return [y_index, m_index, d_index];
 };
 const save_entry = (d, date, rating, msg, special) => {
     if (!d.opened_diary)
@@ -521,10 +530,86 @@ const add_cli = async (d) => {
 const del_cli = async (d) => {
     if (!d.opened_diary)
         return default_cli(d);
+    const date = [0, 0, 0];
+    (0, cli_1.info)(d, p.DATE_PROMPT);
+    try {
+        const [y, m, _d] = await get_date_prompt();
+        if (y === -1 && m === -1 && _d === -1)
+            return (0, cli_1.success)(d, p.ABORTED);
+        date[0] = y;
+        date[1] = m;
+        date[2] = _d;
+    }
+    catch (err) {
+        return (0, cli_1.warn)(d, p.INVALID_DATE);
+    }
+    const status = check_entry_exists(d, date);
+    if (status === false)
+        return (0, cli_1.warn)(d, p.UNKNOWN_ENTRY);
+    const date_obj = new Date(date[0], date[1] - 1, date[2]);
+    const fmt_day = chalk_1.default.bold `${types_1.Day[date_obj.getDay()]} ${date_obj.getFullYear()}/${zero_pad(date_obj.getMonth() + 1, 2)}/${zero_pad(date_obj.getDate(), 2)}`;
+    (0, cli_1.info)(d, `${p.ASK_DELETE} (${chalk_1.default.bold(fmt_day)})`);
+    const { proceed } = await inquirer_1.default.prompt([
+        {
+            type: 'confirm',
+            name: 'proceed',
+            message: '[>]',
+            default: false,
+            prefix: '',
+            suffix: '',
+        },
+    ]);
+    if (proceed) {
+        d.opened_diary.diary.years[status[0]].months[status[1]].days.splice(status[2], 1);
+        (0, cli_1.success)(d, `${p.ENTRY_DELETED} (${chalk_1.default.bold(fmt_day)})`);
+        d.changes_made = true;
+    }
+    else {
+        (0, cli_1.success)(d, p.ABORTED);
+    }
 };
 const edit_cli = async (d) => {
     if (!d.opened_diary)
         return default_cli(d);
+    const date = [0, 0, 0];
+    (0, cli_1.info)(d, p.DATE_PROMPT);
+    try {
+        const [y, m, _d] = await get_date_prompt();
+        if (y === -1 && m === -1 && _d === -1)
+            return (0, cli_1.success)(d, p.ABORTED);
+        date[0] = y;
+        date[1] = m;
+        date[2] = _d;
+    }
+    catch (err) {
+        return (0, cli_1.warn)(d, p.INVALID_DATE);
+    }
+    const status = check_entry_exists(d, date);
+    if (status === false)
+        return (0, cli_1.warn)(d, p.UNKNOWN_ENTRY);
+    const before = d.opened_diary.diary.years[status[0]].months[status[1]].days[status[2]];
+    const _date = new Date(date[0], date[1] - 1, date[2]);
+    const header_text = chalk_1.default.bold `${types_1.Day[_date.getDay()]} ${_date.getFullYear()}/${zero_pad(_date.getMonth() + 1, 2)}/${zero_pad(_date.getDate(), 2)}`;
+    (0, cli_1.info)(d, p.NOW_EDITING + header_text);
+    (0, cli_1.info)(d, p.PROMPT_RATING);
+    (0, cli_1.info)(d, `${p.ORIGINAL} ${colour_rating(before.rating, before.rating.toString())}`);
+    const rating = await get_rating_prompt();
+    (0, cli_1.info)(d, p.PROMPT_MESSAGE);
+    (0, cli_1.info)(d, p.ORIGINAL);
+    if (before.description) {
+        (0, cli_1.info)(d, before.description.split('\n'));
+    }
+    else {
+        (0, cli_1.info)(d, 'None');
+    }
+    const message = await get_message_prompt();
+    (0, cli_1.info)(d, p.PROMPT_IS_SPECIAL);
+    (0, cli_1.info)(d, `${p.ORIGINAL} ${before.is_important ? p.YES : p.NO}`);
+    const is_special = await get_special_prompt();
+    if (await confirm_entry_prompt(d, rating, message, is_special))
+        save_entry(d, date, rating, message, is_special);
+    else
+        (0, cli_1.success)(d, p.ABORTED);
 };
 const get_month_prompt = async () => {
     const { date_input } = await inquirer_1.default.prompt([
@@ -607,15 +692,7 @@ const view_cli = async (d) => {
         else {
             const special = day.is_important ? '+' : ' ';
             const text = ` ${special}${zero_pad(i + 1, 2)} `;
-            display_calender[current_row].push(day.rating === 1
-                ? chalk_1.default.bgRedBright(text)
-                : day.rating === 2
-                    ? chalk_1.default.bgYellowBright.black(text)
-                    : day.rating === 3
-                        ? chalk_1.default.inverse(text)
-                        : day.rating === 4
-                            ? chalk_1.default.bgCyanBright.black(text)
-                            : chalk_1.default.bgGreenBright(text));
+            display_calender[current_row].push(colour_rating(day.rating, text));
         }
     }
     while (display_calender[display_calender.length - 1].length < 7)
@@ -663,22 +740,75 @@ const list_cli = async (d) => {
     days.map((_, i) => {
         const date_obj = new Date(date.getFullYear(), date.getMonth(), _.day);
         const fmt_day = chalk_1.default.bold `${types_1.Day[date_obj.getDay()]} ${date.getFullYear()}/${zero_pad(date.getMonth() + 1, 2)}/${zero_pad(_.day, 2)}`;
-        const fmt_rating = _.rating === 1
-            ? chalk_1.default.bgRedBright('1')
-            : _.rating === 2
-                ? chalk_1.default.bgYellowBright.black('2')
-                : _.rating === 3
-                    ? chalk_1.default.inverse('3')
-                    : _.rating === 4
-                        ? chalk_1.default.bgCyanBright.black('4')
-                        : chalk_1.default.bgGreenBright('5');
-        (0, cli_1.info)(d, `┃ ${fmt_day}${' '.repeat(30 - fmt_day.length)}(${fmt_rating}/5)`);
+        (0, cli_1.info)(d, `┃ ${fmt_day}${' '.repeat(30 - fmt_day.length)}(${colour_rating(_.rating, _.rating.toString())}/5)`);
         if (_.description) {
             (0, cli_1.info)(d, `┠─Notes${'─'.repeat(process.stdout.columns - 12)}`);
             (0, cli_1.info)(d, _.description.split('\n').map(t => '┃ ' + t));
         }
         (0, cli_1.info)(d, `${i + 1 === days.length ? '┗' : '┣'}${'━'.repeat(process.stdout.columns - 6)}`);
     });
+};
+const export_cli = async (d) => {
+    if (!d.opened_diary)
+        return default_cli(d);
+    try {
+        await fs_2.promises.mkdir(types_1.EXPORT_PATH);
+    }
+    catch (err) { }
+    try {
+        const file_path = `${types_1.EXPORT_PATH}/${types_1.DIARY_NAME}.json`;
+        await fs_2.promises.writeFile(file_path, JSON.stringify(d.opened_diary.diary));
+        (0, cli_1.info)(d, p.EXPORT_SUCCESS + file_path);
+    }
+    catch (e) {
+        (0, cli_1.err)(d, p.EXPORT_FAIL, String(e));
+    }
+};
+const real_import_json_diary = async (d) => {
+    try {
+        const file_contents = await fs_2.promises.readFile(types_1.IMPORT_PATH);
+        d.opened_diary = {
+            diary: JSON.parse(file_contents.toString('utf8')),
+            key: null,
+        };
+        (0, cli_1.success)(d, p.IMPORT_SUCCESS);
+        d.changes_made = true;
+    }
+    catch (e) {
+        (0, cli_1.err)(d, p.IMPORT_FAIL, String(e));
+    }
+};
+const import_cli = async (d) => {
+    if (!d.opened_diary)
+        return default_cli(d);
+    let exists;
+    try {
+        await fs_2.promises.access(types_1.DIARY_PATH, fs_1.default.constants.F_OK);
+        exists = true;
+    }
+    catch (err) {
+        exists = false;
+    }
+    if (exists) {
+        (0, cli_1.info)(d, p.ASK_OVERWRITE);
+        const { proceed } = await inquirer_1.default.prompt([
+            {
+                type: 'confirm',
+                name: 'proceed',
+                message: '[>]',
+                default: false,
+                prefix: '',
+                suffix: '',
+            },
+        ]);
+        if (proceed)
+            await real_import_json_diary(d);
+        else
+            (0, cli_1.success)(d, p.ABORTED);
+    }
+    else {
+        await real_import_json_diary(d);
+    }
 };
 const loop = async (d) => {
     const { cmd } = await inquirer_1.default.prompt([
@@ -700,8 +830,8 @@ const loop = async (d) => {
             case 'new':
                 await new_diary_cli(d);
                 break;
-            case 'import':
-                await import_diary_cli(d);
+            case 'download':
+                await download_diary_cli(d);
                 break;
             case 'sync':
                 await sync_cli(d);
@@ -733,14 +863,14 @@ const loop = async (d) => {
             case 'list':
                 await list_cli(d);
                 break;
+            case 'export':
+                await export_cli(d);
+                break;
+            case 'import':
+                await import_cli(d);
+                break;
             case 'quit':
                 await quit_cli(d);
-                break;
-            case 'debug':
-                console.log('[DEBUG]', d.settings);
-                console.log('[DEBUG]', d.opened_diary);
-                console.log('[DEBUG]', d.client ? 'oauth2client exists' : 'oauth2client does not exist');
-                console.log('[DEBUG] changes_made', d.changes_made);
                 break;
             default:
                 default_cli(d);

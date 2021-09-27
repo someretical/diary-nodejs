@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Day = exports.Month = exports.Rating = exports.SCOPES = exports.FILE_VERSION = exports.DUMP_PATH = exports.BACKUP_PATH = exports.DIARY_PATH = exports.BACKUP_NAME = exports.DIARY_NAME = exports.TOKEN_PATH = exports.SETTINGS_PATH = exports.DATA_PATH = exports.VERSION = void 0;
-exports.VERSION = '0.0.4';
+exports.Day = exports.Month = exports.Rating = exports.SCOPES = exports.FILE_VERSION = exports.DUMP_PATH = exports.EXPORT_PATH = exports.IMPORT_PATH = exports.BACKUP_PATH = exports.DIARY_PATH = exports.BACKUP_NAME = exports.DIARY_NAME = exports.TOKEN_PATH = exports.SETTINGS_PATH = exports.DATA_PATH = exports.VERSION = void 0;
+exports.VERSION = '1.0.0';
 exports.DATA_PATH = './data';
 exports.SETTINGS_PATH = `${exports.DATA_PATH}/settings.json`;
 exports.TOKEN_PATH = `${exports.DATA_PATH}/credentials.json`;
@@ -9,6 +9,8 @@ exports.DIARY_NAME = 'diary.dat';
 exports.BACKUP_NAME = 'diary.dat.bak';
 exports.DIARY_PATH = `${exports.DATA_PATH}/${exports.DIARY_NAME}`;
 exports.BACKUP_PATH = `${exports.DATA_PATH}/${exports.BACKUP_NAME}`;
+exports.IMPORT_PATH = `${exports.DATA_PATH}/import`;
+exports.EXPORT_PATH = `${exports.DATA_PATH}/export`;
 exports.DUMP_PATH = `${exports.DATA_PATH}/dump`;
 exports.FILE_VERSION = 1;
 exports.SCOPES = [

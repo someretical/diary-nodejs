@@ -21,7 +21,7 @@ import clipboardy from 'clipboardy';
  * client_secret.json is not actually secret in this case
  * See https://developers.google.com/identity/protocols/oauth2
  */
-import credentials from './client_secret.json';
+import credentials from './details.json';
 import fs from 'fs';
 import { promises as fsp } from 'fs';
 import { google } from 'googleapis';
