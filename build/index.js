@@ -47,6 +47,7 @@ const colour_rating = (rating, text) => rating === 1
             : rating === 4
                 ? chalk_1.default.bgCyanBright.black(text)
                 : chalk_1.default.bgGreenBright(text);
+const readable_date = (date = new Date()) => chalk_1.default.bold `${types_1.Day[date.getDay()]} ${date.getFullYear()}/${zero_pad(date.getMonth() + 1, 2)}/${zero_pad(date.getDate(), 2)}`;
 const default_cli = (d) => (0, cli_1.warn)(d, p.UNKNOWN_CMD);
 const make_new_diary = (d) => {
     d.changes_made = true;
@@ -424,12 +425,13 @@ const get_special_prompt = async () => {
     ]);
     return status;
 };
-const confirm_entry_prompt = async (d, rating, msg, special) => {
+const confirm_entry_prompt = async (d, rating, msg, special, date) => {
     (0, cli_1.info)(d, [
         p.CONFIRM_ENTRY[0],
-        p.CONFIRM_ENTRY[1] + colour_rating(rating, rating.toString()),
-        p.CONFIRM_ENTRY[2] + (msg || 'None'),
-        p.CONFIRM_ENTRY[3] + (special ? p.YES : p.NO),
+        p.CONFIRM_ENTRY[1] + readable_date(date),
+        p.CONFIRM_ENTRY[2] + colour_rating(rating, rating.toString()),
+        p.CONFIRM_ENTRY[3] + (msg || 'None'),
+        p.CONFIRM_ENTRY[4] + (special ? p.YES : p.NO),
     ]);
     const { status } = await inquirer_1.default.prompt([
         {
@@ -511,18 +513,17 @@ const add_cli = async (d) => {
     catch (err) {
         return (0, cli_1.warn)(d, p.INVALID_DATE);
     }
-    if (check_entry_exists(d, date))
-        return (0, cli_1.warn)(d, p.ENTRY_EXISTS);
     const _date = new Date(date[0], date[1] - 1, date[2]);
-    const header_text = chalk_1.default.bold `${types_1.Day[_date.getDay()]} ${_date.getFullYear()}/${zero_pad(_date.getMonth() + 1, 2)}/${zero_pad(_date.getDate(), 2)}`;
-    (0, cli_1.info)(d, p.NOW_EDITING + header_text);
+    if (check_entry_exists(d, date))
+        return (0, cli_1.warn)(d, `${p.ENTRY_EXISTS} (${readable_date(_date)})`);
+    (0, cli_1.info)(d, p.NOW_EDITING + readable_date(_date));
     (0, cli_1.info)(d, p.PROMPT_RATING);
     const rating = await get_rating_prompt();
     (0, cli_1.info)(d, p.PROMPT_MESSAGE);
     const message = await get_message_prompt();
     (0, cli_1.info)(d, p.PROMPT_IS_SPECIAL);
     const is_special = await get_special_prompt();
-    if (await confirm_entry_prompt(d, rating, message, is_special))
+    if (await confirm_entry_prompt(d, rating, message, is_special, _date))
         save_entry(d, date, rating, message, is_special);
     else
         (0, cli_1.success)(d, p.ABORTED);
@@ -544,11 +545,10 @@ const del_cli = async (d) => {
         return (0, cli_1.warn)(d, p.INVALID_DATE);
     }
     const status = check_entry_exists(d, date);
-    if (status === false)
-        return (0, cli_1.warn)(d, p.UNKNOWN_ENTRY);
     const date_obj = new Date(date[0], date[1] - 1, date[2]);
-    const fmt_day = chalk_1.default.bold `${types_1.Day[date_obj.getDay()]} ${date_obj.getFullYear()}/${zero_pad(date_obj.getMonth() + 1, 2)}/${zero_pad(date_obj.getDate(), 2)}`;
-    (0, cli_1.info)(d, `${p.ASK_DELETE} (${chalk_1.default.bold(fmt_day)})`);
+    if (status === false)
+        return (0, cli_1.warn)(d, `${p.UNKNOWN_ENTRY} (${readable_date(date_obj)})`);
+    (0, cli_1.info)(d, `${p.ASK_DELETE} (${readable_date(date_obj)}})`);
     const { proceed } = await inquirer_1.default.prompt([
         {
             type: 'confirm',
@@ -561,7 +561,7 @@ const del_cli = async (d) => {
     ]);
     if (proceed) {
         d.opened_diary.diary.years[status[0]].months[status[1]].days.splice(status[2], 1);
-        (0, cli_1.success)(d, `${p.ENTRY_DELETED} (${chalk_1.default.bold(fmt_day)})`);
+        (0, cli_1.success)(d, `${p.ENTRY_DELETED} (${readable_date(date_obj)})`);
         d.changes_made = true;
     }
     else {
@@ -585,12 +585,11 @@ const edit_cli = async (d) => {
         return (0, cli_1.warn)(d, p.INVALID_DATE);
     }
     const status = check_entry_exists(d, date);
-    if (status === false)
-        return (0, cli_1.warn)(d, p.UNKNOWN_ENTRY);
-    const before = d.opened_diary.diary.years[status[0]].months[status[1]].days[status[2]];
     const _date = new Date(date[0], date[1] - 1, date[2]);
-    const header_text = chalk_1.default.bold `${types_1.Day[_date.getDay()]} ${_date.getFullYear()}/${zero_pad(_date.getMonth() + 1, 2)}/${zero_pad(_date.getDate(), 2)}`;
-    (0, cli_1.info)(d, p.NOW_EDITING + header_text);
+    if (status === false)
+        return (0, cli_1.warn)(d, `${p.UNKNOWN_ENTRY} (${readable_date(_date)})`);
+    const before = d.opened_diary.diary.years[status[0]].months[status[1]].days[status[2]];
+    (0, cli_1.info)(d, p.NOW_EDITING + readable_date(_date));
     (0, cli_1.info)(d, p.PROMPT_RATING);
     (0, cli_1.info)(d, `${p.ORIGINAL} ${colour_rating(before.rating, before.rating.toString())}`);
     const rating = await get_rating_prompt();
@@ -606,7 +605,7 @@ const edit_cli = async (d) => {
     (0, cli_1.info)(d, p.PROMPT_IS_SPECIAL);
     (0, cli_1.info)(d, `${p.ORIGINAL} ${before.is_important ? p.YES : p.NO}`);
     const is_special = await get_special_prompt();
-    if (await confirm_entry_prompt(d, rating, message, is_special))
+    if (await confirm_entry_prompt(d, rating, message, is_special, _date))
         save_entry(d, date, rating, message, is_special);
     else
         (0, cli_1.success)(d, p.ABORTED);
@@ -738,9 +737,8 @@ const list_cli = async (d) => {
     (0, cli_1.info)(d, `┃ ${header_text}`);
     (0, cli_1.info)(d, `┣${'━'.repeat(process.stdout.columns - 6)}`);
     days.map((_, i) => {
-        const date_obj = new Date(date.getFullYear(), date.getMonth(), _.day);
-        const fmt_day = chalk_1.default.bold `${types_1.Day[date_obj.getDay()]} ${date.getFullYear()}/${zero_pad(date.getMonth() + 1, 2)}/${zero_pad(_.day, 2)}`;
-        (0, cli_1.info)(d, `┃ ${fmt_day}${' '.repeat(30 - fmt_day.length)}(${colour_rating(_.rating, _.rating.toString())}/5)`);
+        const date_text = readable_date(new Date(date.getFullYear(), date.getMonth(), _.day));
+        (0, cli_1.info)(d, `┃ $ date_text}${' '.repeat(30 - date_text.length)}(${colour_rating(_.rating, _.rating.toString())}/5)`);
         if (_.description) {
             (0, cli_1.info)(d, `┠─Notes${'─'.repeat(process.stdout.columns - 12)}`);
             (0, cli_1.info)(d, _.description.split('\n').map(t => '┃ ' + t));

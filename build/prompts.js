@@ -64,13 +64,14 @@ exports.INVALID_MESSAGE = 'The message has a maximum length of 1000 characters.'
 exports.PROMPT_IS_SPECIAL = 'Do you want to make this day as important?';
 exports.CONFIRM_ENTRY = [
     `Please ${chalk_1.default.bold `confirm`} the following details:`,
+    `${chalk_1.default.bold `Day:`}       `,
     `${chalk_1.default.bold `Rating:`}    `,
     `${chalk_1.default.bold `Message:`}   `,
     `${chalk_1.default.bold `Important?`} `,
 ];
 exports.YES = 'yes';
 exports.NO = 'no';
-exports.ENTRY_EXISTS = 'An entry for this date already exists. Type {edit} to modify an existing entry.';
+exports.ENTRY_EXISTS = 'An entry already exists. Type {edit} to modify an existing entry.';
 exports.ENTRY_ADDED = 'The entry has been added to the diary.';
 exports.LIST_INFO = 'Listing all entries for ';
 exports.EXPORT_SUCCESS = 'The diary has been exported to ';

@@ -140,6 +140,7 @@ export const PROMPT_IS_SPECIAL = 'Do you want to make this day as important?';
 
 export const CONFIRM_ENTRY = [
 	`Please ${chalk.bold`confirm`} the following details:`,
+	`${chalk.bold`Day:`}       `,
 	`${chalk.bold`Rating:`}    `,
 	`${chalk.bold`Message:`}   `,
 	`${chalk.bold`Important?`} `,
@@ -150,7 +151,7 @@ export const YES = 'yes';
 export const NO = 'no';
 
 export const ENTRY_EXISTS =
-	'An entry for this date already exists. Type {edit} to modify an existing entry.';
+	'An entry already exists. Type {edit} to modify an existing entry.';
 
 export const ENTRY_ADDED = 'The entry has been added to the diary.';
 

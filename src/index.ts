@@ -31,6 +31,10 @@ import { promises as fsp } from 'fs';
 import { hash_key } from './encryptor';
 import inquirer from 'inquirer';
 
+/**
+ * TODO: fix the date prompt return values and rename date variables to actual meaningful names
+ */
+
 const zero_pad = (num: number, places: number) => {
 	let str = num.toString();
 	while (str.length < places) str = '0' + str;
@@ -47,6 +51,12 @@ const colour_rating = (rating: number, text: string) =>
 		: rating === 4
 		? chalk.bgCyanBright.black(text)
 		: chalk.bgGreenBright(text);
+
+const readable_date = (date = new Date()) =>
+	chalk.bold`${Day[date.getDay()]} ${date.getFullYear()}/${zero_pad(
+		date.getMonth() + 1,
+		2
+	)}/${zero_pad(date.getDate(), 2)}`;
 
 const default_cli = (d: DataContainer) => warn(d, p.UNKNOWN_CMD);
 
@@ -456,13 +466,15 @@ const confirm_entry_prompt = async (
 	d: DataContainer,
 	rating: number,
 	msg: string,
-	special: boolean
+	special: boolean,
+	date: Date
 ): Promise<boolean> => {
 	info(d, [
 		p.CONFIRM_ENTRY[0],
-		p.CONFIRM_ENTRY[1] + colour_rating(rating, rating.toString()),
-		p.CONFIRM_ENTRY[2] + (msg || 'None'),
-		p.CONFIRM_ENTRY[3] + (special ? p.YES : p.NO),
+		p.CONFIRM_ENTRY[1] + readable_date(date),
+		p.CONFIRM_ENTRY[2] + colour_rating(rating, rating.toString()),
+		p.CONFIRM_ENTRY[3] + (msg || 'None'),
+		p.CONFIRM_ENTRY[4] + (special ? p.YES : p.NO),
 	]);
 
 	const { status } = await inquirer.prompt([
@@ -569,17 +581,11 @@ const add_cli = async (d: DataContainer) => {
 		return warn(d, p.INVALID_DATE);
 	}
 
-	if (check_entry_exists(d, date)) return warn(d, p.ENTRY_EXISTS);
-
 	const _date = new Date(date[0], date[1] - 1, date[2]);
-	const header_text = chalk.bold`${
-		Day[_date.getDay()]
-	} ${_date.getFullYear()}/${zero_pad(_date.getMonth() + 1, 2)}/${zero_pad(
-		_date.getDate(),
-		2
-	)}`;
+	if (check_entry_exists(d, date))
+		return warn(d, `${p.ENTRY_EXISTS} (${readable_date(_date)})`);
 
-	info(d, p.NOW_EDITING + header_text);
+	info(d, p.NOW_EDITING + readable_date(_date));
 
 	info(d, p.PROMPT_RATING);
 	const rating = await get_rating_prompt();
@@ -590,7 +596,7 @@ const add_cli = async (d: DataContainer) => {
 	info(d, p.PROMPT_IS_SPECIAL);
 	const is_special = await get_special_prompt();
 
-	if (await confirm_entry_prompt(d, rating, message, is_special))
+	if (await confirm_entry_prompt(d, rating, message, is_special, _date))
 		save_entry(d, date, rating, message, is_special);
 	else success(d, p.ABORTED);
 };
@@ -613,18 +619,12 @@ const del_cli = async (d: DataContainer) => {
 	}
 
 	const status = check_entry_exists(d, date);
-
-	if (status === false) return warn(d, p.UNKNOWN_ENTRY);
-
 	const date_obj = new Date(date[0], date[1] - 1, date[2]);
-	const fmt_day = chalk.bold`${
-		Day[date_obj.getDay()]
-	} ${date_obj.getFullYear()}/${zero_pad(
-		date_obj.getMonth() + 1,
-		2
-	)}/${zero_pad(date_obj.getDate(), 2)}`;
 
-	info(d, `${p.ASK_DELETE} (${chalk.bold(fmt_day)})`);
+	if (status === false)
+		return warn(d, `${p.UNKNOWN_ENTRY} (${readable_date(date_obj)})`);
+
+	info(d, `${p.ASK_DELETE} (${readable_date(date_obj)}})`);
 	const { proceed } = await inquirer.prompt([
 		{
 			type: 'confirm',
@@ -642,7 +642,7 @@ const del_cli = async (d: DataContainer) => {
 			1
 		);
 
-		success(d, `${p.ENTRY_DELETED} (${chalk.bold(fmt_day)})`);
+		success(d, `${p.ENTRY_DELETED} (${readable_date(date_obj)})`);
 		d.changes_made = true;
 	} else {
 		success(d, p.ABORTED);
@@ -667,20 +667,14 @@ const edit_cli = async (d: DataContainer) => {
 	}
 
 	const status = check_entry_exists(d, date);
-	if (status === false) return warn(d, p.UNKNOWN_ENTRY);
+	const _date = new Date(date[0], date[1] - 1, date[2]);
+	if (status === false)
+		return warn(d, `${p.UNKNOWN_ENTRY} (${readable_date(_date)})`);
 
 	const before =
 		d.opened_diary.diary.years[status[0]].months[status[1]].days[status[2]];
-	const _date = new Date(date[0], date[1] - 1, date[2]);
-	const header_text = chalk.bold`${
-		Day[_date.getDay()]
-	} ${_date.getFullYear()}/${zero_pad(_date.getMonth() + 1, 2)}/${zero_pad(
-		_date.getDate(),
-		2
-	)}`;
 
-	info(d, p.NOW_EDITING + header_text);
-
+	info(d, p.NOW_EDITING + readable_date(_date));
 	info(d, p.PROMPT_RATING);
 	info(
 		d,
@@ -701,7 +695,7 @@ const edit_cli = async (d: DataContainer) => {
 	info(d, `${p.ORIGINAL} ${before.is_important ? p.YES : p.NO}`);
 	const is_special = await get_special_prompt();
 
-	if (await confirm_entry_prompt(d, rating, message, is_special))
+	if (await confirm_entry_prompt(d, rating, message, is_special, _date))
 		save_entry(d, date, rating, message, is_special);
 	else success(d, p.ABORTED);
 };
@@ -885,17 +879,13 @@ const list_cli = async (d: DataContainer) => {
 	info(d, `┣${'━'.repeat(process.stdout.columns - 6)}`);
 
 	days.map((_, i) => {
-		const date_obj = new Date(date.getFullYear(), date.getMonth(), _.day);
-		const fmt_day = chalk.bold`${
-			Day[date_obj.getDay()]
-		} ${date.getFullYear()}/${zero_pad(date.getMonth() + 1, 2)}/${zero_pad(
-			_.day,
-			2
-		)}`;
+		const date_text = readable_date(
+			new Date(date.getFullYear(), date.getMonth(), _.day)
+		);
 
 		info(
 			d,
-			`┃ ${fmt_day}${' '.repeat(30 - fmt_day.length)}(${colour_rating(
+			`┃ $ date_text}${' '.repeat(30 - date_text.length)}(${colour_rating(
 				_.rating,
 				_.rating.toString()
 			)}/5)`
