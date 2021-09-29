@@ -1,4 +1,11 @@
-import { DIARY_NAME, DUMP_PATH, EXPORT_PATH, VERSION } from './types';
+import {
+	DIARY_NAME,
+	DUMP_PATH,
+	EXPORT_NAME,
+	EXPORT_PATH,
+	IMPORT_PATH,
+	VERSION,
+} from './types';
 import chalk from 'chalk';
 
 /**
@@ -10,11 +17,32 @@ export const UNKNOWN_CMD =
 export const DIARY_CREATE =
 	'A new diary was created. Type {help} to see new commands.';
 
-export const HELP_DIARY_CLOSED =
-	'Commands: {download} {dump} {flush} {help} {import} {new} {open} {quit}';
+export const HELP_DIARY_CLOSED = [
+	`${chalk.bold`\`Command\``}%%%${chalk.bold`Description`}`,
+	'{download}%%%download the diary backup from Google Drive.',
+	"{dump}%%%download a copy of all files in the app's Google Drive folder.",
+	'{flush}%%%delete the Google API access token.',
+	'{help}%%%displays the help message',
+	`{import}%%%import an unencrypted and uncompressed JSON diary from ${IMPORT_PATH}/${EXPORT_NAME}`,
+	'{new}%%%create a new diary.',
+	'{open}%%%open an existing local diary.',
+	'{quit}%%%quit the app without saving changes.',
+];
 
-export const HELP_DIARY_OPEN =
-	'Commands: {add} {close} {del} {edit} {export} {help} {list} {pwd} {quit} {sync} {view}';
+export const HELP_DIARY_OPEN = [
+	`${chalk.bold`Command`}%%%${chalk.bold`Description`}`,
+	'{add}%%%add a new entry to the diary.',
+	'{close}%%%save the diary and upload it to Google Drive if sync is enabled. The diary will be closed afterwards.',
+	'{del}%%%delete an existing entry from the diary',
+	'{edit}%%%edit and existing entry in the diary.',
+	`{export}%%%export the current diary in unencrypted and uncompressed JSON format to ${EXPORT_PATH}/${EXPORT_NAME}`,
+	'{help}%%%displays the help message',
+	'{list}%%%sequentially list each entry for a given month.',
+	'{pwd}%%%change the password for the currently open diary.',
+	`{quit}%%%quit the app without saving changes.`,
+	'{sync}%%%enable/disable Google Drive sync.',
+	'{view}%%%display the entries for the current month in calender form.',
+];
 
 export const OPENED_DIARY = 'Diary opened. Type {help} to see new commands.';
 

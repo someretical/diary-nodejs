@@ -1,6 +1,6 @@
 import { OAuth2Client } from 'google-auth-library';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 
 export const DATA_PATH = './data';
 
@@ -11,6 +11,8 @@ export const TOKEN_PATH = `${DATA_PATH}/credentials.json`;
 export const DIARY_NAME = 'diary.dat';
 
 export const BACKUP_NAME = 'diary.dat.bak';
+
+export const EXPORT_NAME = 'diary.dat.json';
 
 export const DIARY_PATH = `${DATA_PATH}/${DIARY_NAME}`;
 

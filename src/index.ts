@@ -2,12 +2,12 @@
 import * as p from './prompts';
 import {
 	DATA_PATH,
-	DIARY_NAME,
 	DIARY_PATH,
 	DUMP_PATH,
 	DailyEntry,
 	DataContainer,
 	Day,
+	EXPORT_NAME,
 	EXPORT_PATH,
 	FILE_VERSION,
 	IMPORT_PATH,
@@ -32,15 +32,17 @@ import { hash_key } from './encryptor';
 import inquirer from 'inquirer';
 
 /**
- * TODO: fix the date prompt return values and rename date variables to actual meaningful names
+ * Pads a number with leading zeroes
  */
-
 const zero_pad = (num: number, places: number) => {
 	let str = num.toString();
 	while (str.length < places) str = '0' + str;
 	return str;
 };
 
+/**
+ * Highlights text based on rating
+ */
 const colour_rating = (rating: number, text: string) =>
 	rating === 1
 		? chalk.bgRedBright(text)
@@ -52,14 +54,23 @@ const colour_rating = (rating: number, text: string) =>
 		? chalk.bgCyanBright.black(text)
 		: chalk.bgGreenBright(text);
 
+/**
+ * Returns a date in WEEKDAY YYYY/MM/DD format
+ */
 const readable_date = (date = new Date()) =>
 	chalk.bold`${Day[date.getDay()]} ${date.getFullYear()}/${zero_pad(
 		date.getMonth() + 1,
 		2
 	)}/${zero_pad(date.getDate(), 2)}`;
 
+/**
+ * Unrecognised command response
+ */
 const default_cli = (d: DataContainer) => warn(d, p.UNKNOWN_CMD);
 
+/**
+ * Returns an empty diary
+ */
 const make_new_diary = (d: DataContainer): OpenDiary => {
 	d.changes_made = true;
 	info(d, p.DIARY_CREATE);
@@ -76,11 +87,27 @@ const make_new_diary = (d: DataContainer): OpenDiary => {
 	};
 };
 
+/**
+ * Displays help message
+ */
 const help_cli = (d: DataContainer) => {
-	if (!d.opened_diary) info(d, p.HELP_DIARY_CLOSED);
-	else info(d, p.HELP_DIARY_OPEN);
+	const arr = d.opened_diary ? p.HELP_DIARY_OPEN : p.HELP_DIARY_CLOSED;
+	const tab_len = 20;
+	const first = arr[0];
+	const [cmd, txt] = first.split('%%%');
+
+	info(d, `${cmd}${' '.repeat(tab_len + 9 - cmd.length)}${txt}`);
+
+	arr.slice(1).map(str => {
+		const [cmd, txt] = str.split('%%%');
+
+		info(d, `${cmd}${' '.repeat(tab_len - cmd.length)}${txt}`);
+	});
 };
 
+/**
+ * Open command
+ */
 const open_cli = async (d: DataContainer) => {
 	if (d.opened_diary) return default_cli(d);
 
@@ -93,6 +120,9 @@ const open_cli = async (d: DataContainer) => {
 	}
 };
 
+/**
+ * New command
+ */
 const new_diary_cli = async (d: DataContainer) => {
 	if (d.opened_diary) return default_cli(d);
 
@@ -124,6 +154,10 @@ const new_diary_cli = async (d: DataContainer) => {
 	}
 };
 
+/**
+ * Second half of download command
+ * Extracted because it is called twice in the first half
+ */
 const real_import_diary = async (d: DataContainer) => {
 	try {
 		d.client = await authorize();
@@ -151,6 +185,9 @@ const real_import_diary = async (d: DataContainer) => {
 	}
 };
 
+/**
+ * Download command
+ */
 const download_diary_cli = async (d: DataContainer) => {
 	if (d.opened_diary) return default_cli(d);
 
@@ -182,6 +219,9 @@ const download_diary_cli = async (d: DataContainer) => {
 	}
 };
 
+/**
+ * Sync command
+ */
 const sync_cli = async (d: DataContainer) => {
 	if (!d.settings || !d.opened_diary) return default_cli(d);
 
@@ -228,6 +268,9 @@ const sync_cli = async (d: DataContainer) => {
 	success(d, d.settings.sync ? p.SYNC_ENABLED : p.SYNC_DISABLED);
 };
 
+/**
+ * Pwd command
+ */
 const pwd_cli = async (d: DataContainer) => {
 	if (!d.opened_diary) return default_cli(d);
 
@@ -266,6 +309,9 @@ const pwd_cli = async (d: DataContainer) => {
 	}
 };
 
+/**
+ * Close command
+ */
 const close_cli = async (d: DataContainer) => {
 	if (!d.settings || !d.opened_diary) return default_cli(d);
 
@@ -304,6 +350,9 @@ const close_cli = async (d: DataContainer) => {
 	if (!fail_save) d.changes_made = false;
 };
 
+/**
+ * Quit command
+ */
 const quit_cli = async (d: DataContainer) => {
 	if (d.changes_made && d.opened_diary) {
 		warn(d, p.UNSAVED_CHANGES);
@@ -330,6 +379,9 @@ const quit_cli = async (d: DataContainer) => {
 	}
 };
 
+/**
+ * Flush command
+ */
 const flush_cli = async (d: DataContainer) => {
 	if (d.opened_diary) return default_cli(d);
 
@@ -341,6 +393,9 @@ const flush_cli = async (d: DataContainer) => {
 	info(d, p.CREDENTIALS_DELETED);
 };
 
+/**
+ * Dump command
+ */
 const dump_cli = async (d: DataContainer) => {
 	if (d.opened_diary) return default_cli(d);
 
@@ -364,7 +419,15 @@ const dump_cli = async (d: DataContainer) => {
 	}
 };
 
-const get_date_prompt = async (): Promise<number[]> => {
+/**
+ * Gets a date from the user
+ * Returns undefined upon cancelling
+ * Returns null if the date is invalid
+ */
+const get_date_prompt = async (
+	d: DataContainer,
+	month_only = false
+): Promise<Date | undefined | null> => {
 	const { date_input } = await inquirer.prompt([
 		{
 			name: 'date_input',
@@ -373,42 +436,44 @@ const get_date_prompt = async (): Promise<number[]> => {
 			suffix: '',
 		},
 	]);
-	const date = [0, 0, 0];
 
-	if (!date_input) {
-		const _ = new Date();
-		date[0] = _.getFullYear();
-		date[1] = _.getMonth() + 1;
-		date[2] = _.getDate();
-	} else if (date_input === 'cancel') {
-		return [-1, -1, -1];
+	if (date_input === 'cancel') {
+		return undefined;
 	} else {
 		const [one, two, three] = date_input.split(' ');
-		let date_obj;
+		const now = new Date();
+		let date_obj: Date;
 
-		if (one && two && three) {
-			// YYYY MM DD
-			date_obj = new Date(parseInt(one), parseInt(two) - 1, parseInt(three));
-		} else if (one && two) {
-			// MM DD
-			const now = new Date();
-			date_obj = new Date(now.getFullYear(), parseInt(one) - 1, parseInt(two));
+		if (month_only) {
+			date_obj =
+				one && two && three
+					? new Date(parseInt(one), parseInt(two) - 1, parseInt(three))
+					: one && two
+					? new Date(now.getFullYear(), parseInt(one) - 1, parseInt(two))
+					: one
+					? new Date(now.getFullYear(), now.getMonth(), parseInt(one))
+					: now;
 		} else {
-			// DD
-			const now = new Date();
-			date_obj = new Date(now.getFullYear(), now.getMonth(), parseInt(one));
+			date_obj =
+				one && two
+					? new Date(parseInt(one), parseInt(two) - 1)
+					: one
+					? new Date(now.getFullYear(), parseInt(one) - 1)
+					: now;
 		}
 
-		if (date_obj.toString() === 'Invalid Date') throw new Error();
+		if (date_obj.toString() === 'Invalid Date') {
+			warn(d, p.INVALID_DATE);
+			return null;
+		}
 
-		date[0] = date_obj.getFullYear();
-		date[1] = date_obj.getMonth() + 1;
-		date[2] = date_obj.getDate();
+		return date_obj;
 	}
-
-	return date;
 };
 
+/**
+ * Gets a rating (1-5) from the user
+ */
 const get_rating_prompt = async (): Promise<number> => {
 	const { rating } = await inquirer.prompt([
 		{
@@ -429,6 +494,9 @@ const get_rating_prompt = async (): Promise<number> => {
 	return parseInt(rating);
 };
 
+/**
+ * Gets a message from the user (max length 1000)
+ */
 const get_message_prompt = async (): Promise<string> => {
 	const { message } = await inquirer.prompt([
 		{
@@ -447,6 +515,9 @@ const get_message_prompt = async (): Promise<string> => {
 	return message;
 };
 
+/**
+ * Asks the user if the day is special
+ */
 const get_special_prompt = async (): Promise<boolean> => {
 	const { status } = await inquirer.prompt([
 		{
@@ -462,6 +533,9 @@ const get_special_prompt = async (): Promise<boolean> => {
 	return status;
 };
 
+/**
+ * Asks the user to confirm the entry details
+ */
 const confirm_entry_prompt = async (
 	d: DataContainer,
 	rating: number,
@@ -491,49 +565,58 @@ const confirm_entry_prompt = async (
 	return status;
 };
 
-const check_entry_exists = (
-	d: DataContainer,
-	date: number[]
-): false | number[] => {
+/**
+ * Check if an entry exists given a date
+ * Returns an array containing indexes to the entry in the diary if it exists
+ * [year_index, month_index, day_index]
+ */
+const check_entry_exists = (d: DataContainer, date: Date): false | number[] => {
 	if (!d.opened_diary) return false;
 
-	const y_index = d.opened_diary.diary.years.findIndex(y => y.year === date[0]);
+	const y_index = d.opened_diary.diary.years.findIndex(
+		y => y.year === date.getFullYear()
+	);
 	if (y_index === -1) return false;
 
 	const m_index = d.opened_diary.diary.years[y_index].months.findIndex(
-		m => m.month === date[1]
+		m => m.month === date.getMonth() + 1
 	);
 	if (m_index === -1) return false;
 
 	const d_index = d.opened_diary.diary.years[y_index].months[
 		m_index
-	].days.findIndex(d => d.day === date[2]);
+	].days.findIndex(d => d.day === date.getDate());
 	if (d_index === -1) return false;
 
 	return [y_index, m_index, d_index];
 };
 
+/**
+ * Creates an entry in the diary
+ */
 const save_entry = (
 	d: DataContainer,
-	date: number[],
+	date: Date,
 	rating: number,
 	msg: string,
 	special: boolean
 ) => {
 	if (!d.opened_diary) return;
 
-	let y_index = d.opened_diary.diary.years.findIndex(y => y.year === date[0]);
+	let y_index = d.opened_diary.diary.years.findIndex(
+		y => y.year === date.getFullYear()
+	);
 	if (y_index === -1) {
-		d.opened_diary.diary.years.push({ year: date[0], months: [] });
+		d.opened_diary.diary.years.push({ year: date.getFullYear(), months: [] });
 		y_index = d.opened_diary.diary.years.length - 1;
 	}
 
 	let m_index = d.opened_diary.diary.years[y_index].months.findIndex(
-		m => m.month === date[1]
+		m => m.month === date.getMonth() + 1
 	);
 	if (m_index === -1) {
 		d.opened_diary.diary.years[y_index].months.push({
-			month: date[1],
+			month: date.getMonth() + 1,
 			days: [],
 		});
 		m_index = d.opened_diary.diary.years[y_index].months.length - 1;
@@ -541,10 +624,10 @@ const save_entry = (
 
 	const d_index = d.opened_diary.diary.years[y_index].months[
 		m_index
-	].days.findIndex(d => d.day === date[2]);
+	].days.findIndex(d => d.day === date.getDate());
 	if (d_index !== -1) {
 		d.opened_diary.diary.years[y_index].months[m_index].days[d_index] = {
-			day: date[2],
+			day: date.getDate(),
 			last_updated: Date.now(),
 			rating,
 			description: msg,
@@ -552,7 +635,7 @@ const save_entry = (
 		};
 	} else {
 		d.opened_diary.diary.years[y_index].months[m_index].days.push({
-			day: date[2],
+			day: date.getDate(),
 			last_updated: Date.now(),
 			rating,
 			description: msg,
@@ -564,28 +647,22 @@ const save_entry = (
 	d.changes_made = true;
 };
 
+/**
+ * Add command
+ */
 const add_cli = async (d: DataContainer) => {
 	if (!d.opened_diary) return default_cli(d);
-	const date = [0, 0, 0];
 
 	info(d, p.DATE_PROMPT);
-	try {
-		const [y, m, _d] = await get_date_prompt();
 
-		if (y === -1 && m === -1 && _d === -1) return success(d, p.ABORTED);
+	const date_obj = await get_date_prompt(d);
+	if (date_obj === null) return;
+	if (date_obj === undefined) return success(d, p.ABORTED);
 
-		date[0] = y;
-		date[1] = m;
-		date[2] = _d;
-	} catch (err) {
-		return warn(d, p.INVALID_DATE);
-	}
+	if (check_entry_exists(d, date_obj))
+		return warn(d, `${p.ENTRY_EXISTS} (${readable_date(date_obj)})`);
 
-	const _date = new Date(date[0], date[1] - 1, date[2]);
-	if (check_entry_exists(d, date))
-		return warn(d, `${p.ENTRY_EXISTS} (${readable_date(_date)})`);
-
-	info(d, p.NOW_EDITING + readable_date(_date));
+	info(d, p.NOW_EDITING + readable_date(date_obj));
 
 	info(d, p.PROMPT_RATING);
 	const rating = await get_rating_prompt();
@@ -596,31 +673,24 @@ const add_cli = async (d: DataContainer) => {
 	info(d, p.PROMPT_IS_SPECIAL);
 	const is_special = await get_special_prompt();
 
-	if (await confirm_entry_prompt(d, rating, message, is_special, _date))
-		save_entry(d, date, rating, message, is_special);
+	if (await confirm_entry_prompt(d, rating, message, is_special, date_obj))
+		save_entry(d, date_obj, rating, message, is_special);
 	else success(d, p.ABORTED);
 };
 
+/**
+ * Delete command
+ */
 const del_cli = async (d: DataContainer) => {
 	if (!d.opened_diary) return default_cli(d);
-	const date = [0, 0, 0];
 
 	info(d, p.DATE_PROMPT);
-	try {
-		const [y, m, _d] = await get_date_prompt();
 
-		if (y === -1 && m === -1 && _d === -1) return success(d, p.ABORTED);
+	const date_obj = await get_date_prompt(d);
+	if (date_obj === null) return;
+	if (date_obj === undefined) return success(d, p.ABORTED);
 
-		date[0] = y;
-		date[1] = m;
-		date[2] = _d;
-	} catch (err) {
-		return warn(d, p.INVALID_DATE);
-	}
-
-	const status = check_entry_exists(d, date);
-	const date_obj = new Date(date[0], date[1] - 1, date[2]);
-
+	const status = check_entry_exists(d, date_obj);
 	if (status === false)
 		return warn(d, `${p.UNKNOWN_ENTRY} (${readable_date(date_obj)})`);
 
@@ -649,125 +719,75 @@ const del_cli = async (d: DataContainer) => {
 	}
 };
 
+/**
+ * Edit command
+ */
 const edit_cli = async (d: DataContainer) => {
 	if (!d.opened_diary) return default_cli(d);
-	const date = [0, 0, 0];
 
 	info(d, p.DATE_PROMPT);
-	try {
-		const [y, m, _d] = await get_date_prompt();
 
-		if (y === -1 && m === -1 && _d === -1) return success(d, p.ABORTED);
+	const date_obj = await get_date_prompt(d);
+	if (date_obj === null) return;
+	if (date_obj === undefined) return success(d, p.ABORTED);
 
-		date[0] = y;
-		date[1] = m;
-		date[2] = _d;
-	} catch (err) {
-		return warn(d, p.INVALID_DATE);
-	}
-
-	const status = check_entry_exists(d, date);
-	const _date = new Date(date[0], date[1] - 1, date[2]);
+	const status = check_entry_exists(d, date_obj);
 	if (status === false)
-		return warn(d, `${p.UNKNOWN_ENTRY} (${readable_date(_date)})`);
+		return warn(d, `${p.UNKNOWN_ENTRY} (${readable_date(date_obj)})`);
 
 	const before =
 		d.opened_diary.diary.years[status[0]].months[status[1]].days[status[2]];
 
-	info(d, p.NOW_EDITING + readable_date(_date));
+	info(d, p.NOW_EDITING + readable_date(date_obj));
 	info(d, p.PROMPT_RATING);
 	info(
 		d,
 		`${p.ORIGINAL} ${colour_rating(before.rating, before.rating.toString())}`
 	);
+
 	const rating = await get_rating_prompt();
 
 	info(d, p.PROMPT_MESSAGE);
 	info(d, p.ORIGINAL);
+
 	if (before.description) {
 		info(d, before.description.split('\n'));
 	} else {
 		info(d, 'None');
 	}
+
 	const message = await get_message_prompt();
 
 	info(d, p.PROMPT_IS_SPECIAL);
 	info(d, `${p.ORIGINAL} ${before.is_important ? p.YES : p.NO}`);
+
 	const is_special = await get_special_prompt();
 
-	if (await confirm_entry_prompt(d, rating, message, is_special, _date))
-		save_entry(d, date, rating, message, is_special);
+	if (await confirm_entry_prompt(d, rating, message, is_special, date_obj))
+		save_entry(d, date_obj, rating, message, is_special);
 	else success(d, p.ABORTED);
 };
 
-const get_month_prompt = async (): Promise<number[]> => {
-	const { date_input } = await inquirer.prompt([
-		{
-			name: 'date_input',
-			message: '[>D]',
-			prefix: '',
-			suffix: '',
-		},
-	]);
-	const date_values = [0, 0, 0];
-
-	if (!date_input) {
-		const _ = new Date();
-		date_values[0] = _.getFullYear();
-		date_values[1] = _.getMonth() + 1;
-	} else if (date_input === 'cancel') {
-		return [-1, -1];
-	} else {
-		const [one, two] = date_input.split(' ');
-		let date_obj;
-
-		if (one && two) {
-			// YYYY MM
-			date_obj = new Date(parseInt(one), parseInt(two) - 1);
-		} else if (one) {
-			// MM
-			const now = new Date();
-			date_obj = new Date(now.getFullYear(), parseInt(one) - 1);
-		} else {
-			const now = new Date();
-			date_obj = new Date(now.getFullYear(), now.getMonth());
-		}
-
-		if (date_obj.toString() === 'Invalid Date') throw new Error();
-
-		date_values[0] = date_obj.getFullYear();
-		date_values[1] = date_obj.getMonth() + 1;
-	}
-
-	return date_values;
-};
-
+/**
+ * View command
+ */
 const view_cli = async (d: DataContainer) => {
 	if (!d.opened_diary) return default_cli(d);
 
-	const date_values = [0, 0];
-
 	info(d, p.MONTH_PROMPT);
-	try {
-		const [y, m] = await get_month_prompt();
 
-		if (y === -1 && m === -1) return success(d, p.ABORTED);
+	const date_obj = await get_date_prompt(d, true);
+	if (date_obj === null) return;
+	if (date_obj === undefined) return success(d, p.ABORTED);
 
-		date_values[0] = y;
-		date_values[1] = m;
-	} catch (err) {
-		return warn(d, p.INVALID_DATE);
-	}
-
-	const date = new Date(date_values[0], date_values[1] - 1);
 	let days: Array<DailyEntry> = [];
 
 	const y_index = d.opened_diary.diary.years.findIndex(
-		y => y.year === date.getFullYear()
+		y => y.year === date_obj.getFullYear()
 	);
 	if (y_index !== -1) {
 		const m_index = d.opened_diary.diary.years[y_index].months.findIndex(
-			m => m.month === date.getMonth() + 1
+			m => m.month === date_obj.getMonth() + 1
 		);
 		if (m_index !== -1)
 			days = d.opened_diary.diary.years[y_index].months[m_index].days;
@@ -782,15 +802,17 @@ const view_cli = async (d: DataContainer) => {
 	 * └───────────────────────────────────┘
 	 */
 
+	// number of days in month
 	const day_count = new Date(
-		date.getFullYear(),
-		date.getMonth() + 1,
+		date_obj.getFullYear(),
+		date_obj.getMonth() + 1,
 		0
 	).getDate();
 
+	// what weekday the first day of the month is
 	let first_day_index = new Date(
-		date.getFullYear(),
-		date.getMonth(),
+		date_obj.getFullYear(),
+		date_obj.getMonth(),
 		1
 	).getDay();
 	first_day_index = first_day_index === 0 ? 6 : first_day_index - 1;
@@ -823,7 +845,9 @@ const view_cli = async (d: DataContainer) => {
 	while (display_calender[display_calender.length - 1].length < 7)
 		display_calender[display_calender.length - 1].push('     ');
 
-	const header_text = `${Month[date.getMonth() + 1]} ${date.getFullYear()}`;
+	const header_text = `${
+		Month[date_obj.getMonth() + 1]
+	} ${date_obj.getFullYear()}`;
 
 	info(d, [
 		'┌───────────────────────────────────┐',
@@ -837,32 +861,25 @@ const view_cli = async (d: DataContainer) => {
 	info(d, '└───────────────────────────────────┘');
 };
 
+/**
+ * List command
+ */
 const list_cli = async (d: DataContainer) => {
 	if (!d.opened_diary) return default_cli(d);
 
-	const date_values = [0, 0];
-
 	info(d, p.MONTH_PROMPT);
-	try {
-		const [y, m] = await get_month_prompt();
+	const date_obj = await get_date_prompt(d, true);
 
-		if (y === -1 && m === -1) return success(d, p.ABORTED);
-
-		date_values[0] = y;
-		date_values[1] = m;
-	} catch (err) {
-		return warn(d, p.INVALID_DATE);
-	}
-
-	const date = new Date(date_values[0], date_values[1] - 1);
+	if (date_obj === null) return;
+	if (date_obj === undefined) return success(d, p.ABORTED);
 
 	const y_index = d.opened_diary.diary.years.findIndex(
-		y => y.year === date.getFullYear()
+		y => y.year === date_obj.getFullYear()
 	);
 	if (y_index === -1) return;
 
 	const m_index = d.opened_diary.diary.years[y_index].months.findIndex(
-		m => m.month === date.getMonth() + 1
+		m => m.month === date_obj.getMonth() + 1
 	);
 	if (m_index === -1) return;
 
@@ -880,7 +897,7 @@ const list_cli = async (d: DataContainer) => {
 
 	days.map((_, i) => {
 		const date_text = readable_date(
-			new Date(date.getFullYear(), date.getMonth(), _.day)
+			new Date(date_obj.getFullYear(), date_obj.getMonth(), _.day)
 		);
 
 		info(
@@ -908,6 +925,9 @@ const list_cli = async (d: DataContainer) => {
 	});
 };
 
+/**
+ * Export command
+ */
 const export_cli = async (d: DataContainer) => {
 	if (!d.opened_diary) return default_cli(d);
 
@@ -917,7 +937,7 @@ const export_cli = async (d: DataContainer) => {
 	} catch (err) {}
 
 	try {
-		const file_path = `${EXPORT_PATH}/${DIARY_NAME}.json`;
+		const file_path = `${EXPORT_PATH}/${EXPORT_NAME}`;
 		await fsp.writeFile(file_path, JSON.stringify(d.opened_diary.diary));
 
 		info(d, p.EXPORT_SUCCESS + file_path);
@@ -926,9 +946,13 @@ const export_cli = async (d: DataContainer) => {
 	}
 };
 
+/**
+ * Second half of import command
+ * Extracted because it is called twice in the first half
+ */
 const real_import_json_diary = async (d: DataContainer) => {
 	try {
-		const file_contents = await fsp.readFile(IMPORT_PATH);
+		const file_contents = await fsp.readFile(`${IMPORT_PATH}/${EXPORT_NAME}`);
 
 		d.opened_diary = {
 			diary: JSON.parse(file_contents.toString('utf8')),
@@ -942,6 +966,9 @@ const real_import_json_diary = async (d: DataContainer) => {
 	}
 };
 
+/**
+ * Import command
+ */
 const import_cli = async (d: DataContainer) => {
 	if (!d.opened_diary) return default_cli(d);
 
@@ -973,6 +1000,10 @@ const import_cli = async (d: DataContainer) => {
 	}
 };
 
+/**
+ * Main loop of the program
+ * Prompts the user for input
+ */
 const loop = async (d: DataContainer): Promise<void> => {
 	const { cmd } = await inquirer.prompt([
 		{
@@ -1057,6 +1088,9 @@ const loop = async (d: DataContainer): Promise<void> => {
 	loop(d);
 };
 
+/**
+ * main is main
+ */
 const main = async () => {
 	try {
 		await fsp.mkdir(DATA_PATH);
