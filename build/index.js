@@ -361,6 +361,14 @@ const get_date_prompt = async (d, month_only = false) => {
         let date_obj;
         if (month_only) {
             date_obj =
+                one && two
+                    ? new Date(parseInt(one), parseInt(two) - 1)
+                    : one
+                        ? new Date(now.getFullYear(), parseInt(one) - 1)
+                        : now;
+        }
+        else {
+            date_obj =
                 one && two && three
                     ? new Date(parseInt(one), parseInt(two) - 1, parseInt(three))
                     : one && two
@@ -368,14 +376,6 @@ const get_date_prompt = async (d, month_only = false) => {
                         : one
                             ? new Date(now.getFullYear(), now.getMonth(), parseInt(one))
                             : now;
-        }
-        else {
-            date_obj =
-                one && two
-                    ? new Date(parseInt(one), parseInt(two) - 1)
-                    : one
-                        ? new Date(now.getFullYear(), parseInt(one) - 1)
-                        : now;
         }
         if (date_obj.toString() === 'Invalid Date') {
             (0, cli_1.warn)(d, p.INVALID_DATE);
@@ -666,7 +666,7 @@ const list_cli = async (d) => {
     (0, cli_1.info)(d, `┣${'━'.repeat(process.stdout.columns - 6)}`);
     days.map((_, i) => {
         const date_text = readable_date(new Date(date_obj.getFullYear(), date_obj.getMonth(), _.day));
-        (0, cli_1.info)(d, `┃ $ date_text}${' '.repeat(30 - date_text.length)}(${colour_rating(_.rating, _.rating.toString())}/5)`);
+        (0, cli_1.info)(d, `┃ ${date_text}${' '.repeat(30 - date_text.length)}(${colour_rating(_.rating, _.rating.toString())}/5)`);
         if (_.description) {
             (0, cli_1.info)(d, `┠─Notes${'─'.repeat(process.stdout.columns - 12)}`);
             (0, cli_1.info)(d, _.description.split('\n').map(t => '┃ ' + t));

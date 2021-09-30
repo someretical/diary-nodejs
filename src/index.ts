@@ -446,19 +446,19 @@ const get_date_prompt = async (
 
 		if (month_only) {
 			date_obj =
+				one && two
+					? new Date(parseInt(one), parseInt(two) - 1)
+					: one
+					? new Date(now.getFullYear(), parseInt(one) - 1)
+					: now;
+		} else {
+			date_obj =
 				one && two && three
 					? new Date(parseInt(one), parseInt(two) - 1, parseInt(three))
 					: one && two
 					? new Date(now.getFullYear(), parseInt(one) - 1, parseInt(two))
 					: one
 					? new Date(now.getFullYear(), now.getMonth(), parseInt(one))
-					: now;
-		} else {
-			date_obj =
-				one && two
-					? new Date(parseInt(one), parseInt(two) - 1)
-					: one
-					? new Date(now.getFullYear(), parseInt(one) - 1)
 					: now;
 		}
 
@@ -902,7 +902,7 @@ const list_cli = async (d: DataContainer) => {
 
 		info(
 			d,
-			`┃ $ date_text}${' '.repeat(30 - date_text.length)}(${colour_rating(
+			`┃ ${date_text}${' '.repeat(30 - date_text.length)}(${colour_rating(
 				_.rating,
 				_.rating.toString()
 			)}/5)`
